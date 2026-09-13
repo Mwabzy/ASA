@@ -131,6 +131,18 @@ export function requireUser(req, res, next){
   next();
 }
 
+/* Registry data additionally requires an account that is no longer on the
+   password it was issued with. Without this the forced change would be a
+   client-side screen only, and the bootstrap password on its own would read
+   the whole registry straight off the API. */
+export function requireActiveUser(req, res, next){
+  if(!req.user) return res.status(401).json({ error: 'Sign in to use the registry.' });
+  if(req.user.must_change_password){
+    return res.status(403).json({ error: 'Set a new password before using the registry.' });
+  }
+  next();
+}
+
 /* ---------- brute-force damping ----------
    Per-identifier backoff held in memory. One instance, one registry — this is
    proportionate; move it to the database if the service is ever scaled out. */

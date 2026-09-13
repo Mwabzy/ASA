@@ -11,7 +11,7 @@ import { migrate } from './migrate.js';
 import {
   hashPassword, verifyPassword, createSession, destroySession, pruneSessions,
   readCookie, setSessionCookie, clearSessionCookie, SESSION_COOKIE,
-  attachUser, requireUser, throttleCheck, throttleFail, throttleReset, sessionTokenHash
+  attachUser, requireUser, requireActiveUser, throttleCheck, throttleFail, throttleReset, sessionTokenHash
 } from './auth.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -131,8 +131,8 @@ app.post('/api/auth/password', requireUser, wrap(async (req, res) => {
 }));
 
 /* From here on, a session is required. */
-app.use('/api/doctors', requireUser);
-app.use('/api/meta', requireUser);
+app.use('/api/doctors', requireActiveUser);
+app.use('/api/meta', requireActiveUser);
 
 app.get('/api/meta', wrap(async (_req, res) => {
   const { rows } = await query(`SELECT value FROM registry_meta WHERE key = 'last_synced_kmpdc'`);
