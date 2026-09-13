@@ -83,3 +83,33 @@ CREATE TABLE IF NOT EXISTS registry_meta (
   value      TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ---------------------------------------------------------------------------
+-- Access control.
+--
+-- Passwords are scrypt hashes, never reversible. Sessions are opaque random
+-- tokens of which only the SHA-256 is stored, so a leaked database cannot be
+-- replayed as a live session.
+
+CREATE TABLE IF NOT EXISTS users (
+  id                   TEXT PRIMARY KEY,
+  email                TEXT NOT NULL,
+  name                 TEXT NOT NULL,
+  role                 TEXT NOT NULL DEFAULT 'Admitting Office',
+  password_hash        TEXT NOT NULL,
+  must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_login_at        TIMESTAMPTZ
+);
+
+-- Sign-in is case-insensitive on the email.
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_key ON users (lower(email));
+
+CREATE TABLE IF NOT EXISTS sessions (
+  token_hash TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expires_at);

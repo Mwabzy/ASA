@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api } from './lib/api.js';
+import { api, UnauthorizedError } from './lib/api.js';
 import { syncStamp } from './lib/dates.js';
 import { emptyForm, newId } from './lib/form.js';
 import AppShell from './components/AppShell.jsx';
@@ -9,15 +9,8 @@ import Registry from './screens/Registry.jsx';
 import Apply from './screens/Apply.jsx';
 import Import from './screens/Import.jsx';
 import Success from './screens/Success.jsx';
-
-/* The signed-in user. Wired to whatever SSO the hospital puts in front of this;
-   until then the service reports the session it has. */
-const FALLBACK_USER = {
-  name: 'Registry Admin',
-  email: 'admitting@nairobihospital.org',
-  role: 'Admitting Office · Medical Administration',
-  initials: 'RA'
-};
+import Login from './screens/Login.jsx';
+import ChangePassword from './screens/ChangePassword.jsx';
 
 const ROUTES = ['apply','registry','import'];
 
@@ -33,7 +26,12 @@ export default function App(){
   const [error, setError]       = useState('');
   const [retrying, setRetrying] = useState(false);
 
-  const [user, setUser]         = useState(FALLBACK_USER);
+  const [user, setUser]         = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [signingIn, setSigningIn]     = useState(false);
+  const [authError, setAuthError]     = useState('');
+  const [pwSaving, setPwSaving]       = useState(false);
+  const [pwError, setPwError]         = useState('');
   const [lastSynced, setSynced] = useState('—');
 
   const [form, setForm]         = useState(emptyForm);
@@ -80,6 +78,51 @@ export default function App(){
     if(key!=='import'){ setImpSummary(null); setCommitError(''); }
   }, []);
 
+  /* ---- session ----
+     Nothing else runs until the service confirms who is signed in. */
+  useEffect(() => {
+    api.me()
+      .then(r => setUser(r.user))
+      .catch(() => setUser(null))
+      .finally(() => setAuthChecked(true));
+  }, []);
+
+  const signIn = async (email, password) => {
+    setSigningIn(true);
+    setAuthError('');
+    try {
+      const r = await api.login(email, password);
+      setUser(r.user);
+    } catch (e) {
+      setAuthError(e.message);
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const signOut = async () => {
+    try { await api.logout(); } catch (e) { /* the cookie is cleared either way */ }
+    setUser(null);
+    setDoctors([]);
+    setSelected(null);
+    setBatchIds(null);
+    setAuthError('');
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    setPwSaving(true);
+    setPwError('');
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      setUser(u => ({ ...u, mustChangePassword: false }));
+      say('Password updated');
+    } catch (e) {
+      setPwError(e.message);
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
   /* ---- data ---- */
   const load = useCallback(async (isRetry) => {
     if(isRetry) setRetrying(true); else setLoading(true);
@@ -87,19 +130,21 @@ export default function App(){
     try {
       const [list, meta] = await Promise.all([api.listDoctors(), api.meta().catch(() => null)]);
       setDoctors(list);
-      if(meta){
-        setSynced(syncStamp(meta.lastSyncedKmpdc));
-        if(meta.user) setUser(u => ({ ...u, ...meta.user }));
-      }
+      if(meta) setSynced(syncStamp(meta.lastSyncedKmpdc));
     } catch (e) {
-      setError(e.message);
+      /* A dead session is not a load failure — it sends you back to sign-in. */
+      if(e instanceof UnauthorizedError){ setUser(null); setAuthError(e.message); }
+      else setError(e.message);
     } finally {
       setLoading(false);
       setRetrying(false);
     }
   }, []);
 
-  useEffect(() => { load(false); }, [load]);
+  /* Load the registry only once there is a usable session. */
+  useEffect(() => {
+    if(user && !user.mustChangePassword) load(false);
+  }, [user, load]);
 
   /* ---- register / edit ---- */
   const startApply = () => {
@@ -165,10 +210,34 @@ export default function App(){
     navigate('registry');
   };
 
-  const signOut = () => {
-    say('Signed out of this session');
-    window.setTimeout(() => { window.location.href = '/'; }, 700);
-  };
+  /* ---- gates ----
+     The registry is never rendered without a session. */
+
+  if(!authChecked){
+    return (
+      <div className="grid min-h-screen place-items-center bg-raised" aria-busy="true">
+        <span className="sr-only">Checking your session…</span>
+        <img src="/logo-nairobi-hospital.png" width="56" height="56" alt=""
+             className="h-14 w-14 opacity-40" />
+      </div>
+    );
+  }
+
+  if(!user){
+    return <Login onSignIn={signIn} signingIn={signingIn} error={authError} />;
+  }
+
+  if(user.mustChangePassword){
+    return (
+      <ChangePassword
+        user={user}
+        onChange={changePassword}
+        saving={pwSaving}
+        error={pwError}
+        onSignOut={signOut}
+      />
+    );
+  }
 
   return (
     <AppShell

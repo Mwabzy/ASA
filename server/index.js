@@ -8,6 +8,11 @@ import { existsSync } from 'node:fs';
 import { query, withTransaction, pool } from './db.js';
 import { fromRow, toRow, toUpdateParams, INSERT_SQL } from './record.js';
 import { migrate } from './migrate.js';
+import {
+  hashPassword, verifyPassword, createSession, destroySession, pruneSessions,
+  readCookie, setSessionCookie, clearSessionCookie, SESSION_COOKIE,
+  attachUser, requireUser, throttleCheck, throttleFail, throttleReset, sessionTokenHash
+} from './auth.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, '..', 'dist');
@@ -46,6 +51,87 @@ app.get('/api/health', wrap(async (_req, res) => {
   await query('SELECT 1');
   res.json({ ok: true });
 }));
+
+/* ---------- authentication ----------
+   Everything below /api except health and login needs a session. */
+
+const publicUser = (u) => ({
+  name: u.name,
+  email: u.email,
+  role: u.role,
+  initials: String(u.name||'?').trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase(),
+  mustChangePassword: !!u.must_change_password
+});
+
+app.post('/api/auth/login', wrap(async (req, res) => {
+  const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+  const password = String((req.body && req.body.password) || '');
+  if(!email || !password) return fail(res, 400, 'Enter your email and password.');
+
+  const gate = throttleCheck(email);
+  if(!gate.ok){
+    return fail(res, 429, 'Too many failed attempts. Try again in '+gate.mins+' minute'+(gate.mins===1?'':'s')+'.');
+  }
+
+  const { rows } = await query(
+    'SELECT id, email, name, role, password_hash, must_change_password FROM users WHERE lower(email) = $1',
+    [email]
+  );
+
+  /* One message for a bad email and a bad password alike, so the response
+     cannot be used to enumerate who has an account. */
+  const user = rows[0];
+  const ok = user ? await verifyPassword(password, user.password_hash) : false;
+  if(!ok){
+    throttleFail(email);
+    return fail(res, 401, 'That email and password do not match.');
+  }
+
+  throttleReset(email);
+  const { token, expires } = await createSession(user.id);
+  setSessionCookie(res, token, expires);
+  await query('UPDATE users SET last_login_at = now() WHERE id = $1', [user.id]);
+  res.json({ user: publicUser(user) });
+}));
+
+app.post('/api/auth/logout', wrap(async (req, res) => {
+  await destroySession(readCookie(req, SESSION_COOKIE));
+  clearSessionCookie(res);
+  res.status(204).end();
+}));
+
+app.use('/api', attachUser);
+
+app.get('/api/auth/me', (req, res) => {
+  if(!req.user) return fail(res, 401, 'Not signed in.');
+  res.json({ user: publicUser(req.user) });
+});
+
+app.post('/api/auth/password', requireUser, wrap(async (req, res) => {
+  const current = String((req.body && req.body.currentPassword) || '');
+  const next = String((req.body && req.body.newPassword) || '');
+  if(next.length < 12) return fail(res, 400, 'Choose a password of at least 12 characters.');
+
+  const { rows } = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+  if(!rows.length || !(await verifyPassword(current, rows[0].password_hash))){
+    return fail(res, 401, 'Your current password is not correct.');
+  }
+
+  await query(
+    'UPDATE users SET password_hash = $2, must_change_password = FALSE WHERE id = $1',
+    [req.user.id, await hashPassword(next)]
+  );
+  /* Changing a password ends every other session for that user. */
+  await query(
+    'DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2',
+    [req.user.id, sessionTokenHash(readCookie(req, SESSION_COOKIE) || '')]
+  );
+  res.json({ ok: true });
+}));
+
+/* From here on, a session is required. */
+app.use('/api/doctors', requireUser);
+app.use('/api/meta', requireUser);
 
 app.get('/api/meta', wrap(async (_req, res) => {
   const { rows } = await query(`SELECT value FROM registry_meta WHERE key = 'last_synced_kmpdc'`);
@@ -141,7 +227,10 @@ if(existsSync(dist)){
 /* ---------- boot ---------- */
 
 migrate()
+  .then(() => pruneSessions())
   .then(() => {
+    /* Expired sessions are dead weight; clear them out daily. */
+    setInterval(() => pruneSessions().catch(e => console.error('Session prune failed:', e)), 864e5).unref();
     app.listen(PORT, () => console.log('Admitting Rights Registry listening on :'+PORT));
   })
   .catch(err => {
