@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+/* ============================================================
+   The Nairobi Hospital — Admitting Rights Registry
+   Brand tokens. Primary red-900, accent yellow-600, heading navy.
+   Green/red are reserved for status and used nowhere else.
+   ============================================================ */
+@theme {
+  --color-brand:        #7F1D1D;  /* red-900 — primary          */
+  --color-brand-hover:  #991B1B;  /* red-800 — hover            */
+  --color-brand-tint:   rgba(127, 29, 29, 0.10);
+  --color-brand-edge:   rgba(127, 29, 29, 0.28);
+  --color-accent:       #CA8A04;  /* yellow-600 — accent shapes */
+  --color-accent-ink:   #A16207;  /* yellow-700 — accent TEXT   */
+  --color-navy:         #0A0A23;  /* headings                   */
+
+  --color-ink:          #111827;  /* primary text               */
+  --color-ink-72:       rgba(17, 24, 39, 0.70);
+  --color-ink-52:       rgba(17, 24, 39, 0.52);
+  --color-line:         rgba(17, 24, 39, 0.14);
+  --color-line-soft:    rgba(17, 24, 39, 0.05);
+  --color-surface:      #FFFFFF;
+  --color-raised:       #F9FAFB;
+
+  /* status only — never decorative */
+  --color-active:       #16A34A;
+  --color-inactive:     #DC2626;
+  --color-expiring:     #CA8A04;
+
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-sans:    "Inter Tight", system-ui, -apple-system, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--font-display); color: var(--color-navy); letter-spacing: -0.02em; margin: 0; }
+
+  /* One focus treatment, everywhere. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 9px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(17,24,39,.26); }
+}
+
+/* ---------- motion ---------- */
+@keyframes se-fwd    { from { opacity:0; transform:translateX(20px) } to { opacity:1; transform:none } }
+@keyframes se-bwd    { from { opacity:0; transform:translateX(-20px) } to { opacity:1; transform:none } }
+@keyframes rise      { from { opacity:0; transform:translateY(8px) }  to { opacity:1; transform:none } }
+@keyframes drawerin  { from { transform:translateX(100%) }            to { transform:none } }
+@keyframes sheetup   { from { transform:translateY(100%) }            to { transform:none } }
+@keyframes fadein    { from { opacity:0 }                             to { opacity:1 } }
+@keyframes breathe   { 0%,100% { opacity:1 } 50% { opacity:.5 } }
+@keyframes shimmer   { 100% { transform:translateX(100%) } }
+
+@utility anim-fwd    { animation: se-fwd .28s cubic-bezier(.22,1,.36,1) both; }
+@utility anim-bwd    { animation: se-bwd .28s cubic-bezier(.22,1,.36,1) both; }
+@utility anim-rise   { animation: rise .34s cubic-bezier(.22,1,.36,1) both; }
+@utility anim-in     { animation: fadein .2s ease both; }
+@utility anim-drawer { animation: drawerin .34s cubic-bezier(.22,1,.36,1) both; }
+@utility anim-sheet  { animation: sheetup .34s cubic-bezier(.22,1,.36,1) both; }
+@utility anim-warn   { animation: breathe 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* ============================================================
+   Components — the handful of patterns repeated across screens.
+   ============================================================ */
+@layer components {
+
+  /* ---- form controls ---- */
+  .inp {
+    width: 100%; padding: .7rem .875rem; border-radius: .625rem;
+    border: 1px solid var(--color-line); background: var(--color-raised);
+    color: var(--color-ink); font-size: .9375rem; font-family: var(--font-sans);
+    outline: none; transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .inp:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-tint); outline: none; }
+  .inp:disabled { background: var(--color-line-soft); color: var(--color-ink-52); cursor: not-allowed; }
+  .inp[type=date] { font-family: var(--font-mono); color-scheme: light; }
+  .inp-mono { font-family: var(--font-mono); }
+  .inp-err { border-color: var(--color-inactive); }
+  select.inp {
+    appearance: none; padding-right: 2.25rem; background-repeat: no-repeat;
+    background-position: right .875rem center;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='3' stroke-linecap='round'><path d='m6 9 6 6 6-6'/></svg>");
+  }
+  textarea.inp { resize: vertical; min-height: 4.75rem; }
+
+  /* ---- buttons ---- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+    padding: .8125rem 1.125rem; border-radius: .75rem; border: 1px solid transparent;
+    background: var(--color-brand); color: #fff; font-size: .9375rem; font-weight: 600;
+    font-family: var(--font-sans); cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .btn:hover:not(:disabled) { background: var(--color-brand-hover); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-ghost { background: transparent; border-color: var(--color-line); color: var(--color-ink); }
+  .btn-ghost:hover:not(:disabled) { background: var(--color-raised); border-color: var(--color-brand-edge); }
+  .btn-sm { padding: .5rem .8125rem; font-size: .8125rem; border-radius: .5rem; }
+
+  /* ---- chrome ---- */
+  .card { border: 1px solid var(--color-line); border-radius: .875rem; background: var(--color-raised); padding: .875rem 1rem; }
+  .dot  { width: .5rem; height: .5rem; border-radius: 9999px; flex: none; display: inline-block; }
+  .eyebrow { font-family: var(--font-mono); font-size: .6875rem; font-weight: 600; letter-spacing: .08em; color: var(--color-accent-ink); }
+  .kicker  { font-size: .6875rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--color-accent-ink); }
+
+  /* ---- filter chips ---- */
+  .chip-filter {
+    flex: none; padding: .4375rem .8125rem; border-radius: 9999px; cursor: pointer;
+    border: 1px solid var(--color-line); background: var(--color-raised);
+    color: var(--color-ink-72); font-size: .78125rem; font-weight: 600; white-space: nowrap;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .chip-filter:hover { border-color: var(--color-brand-edge); }
+  .chip-filter[aria-pressed="true"] { background: var(--color-brand); border-color: var(--color-brand); color: #fff; }
+  .chip-sub { padding: .34375rem .75rem; font-size: .75rem; font-weight: 500; background: transparent; color: var(--color-ink-52); }
+  .chip-sub[aria-pressed="true"] { background: var(--color-brand-tint); border-color: var(--color-brand); color: var(--color-ink); }
+
+  /* ---- key/value rows ---- */
+  .kv { display: flex; justify-content: space-between; gap: .875rem; padding: .3125rem 0; }
+  .kv-k { font-size: .8125rem; color: var(--color-ink-52); flex: none; white-space: nowrap; }
+  .kv-v { flex: 1; min-width: 0; font-size: .8125rem; color: var(--color-ink); text-align: right; overflow-wrap: anywhere; }
+
+  /* ---- loading skeleton ---- */
+  .skel { position: relative; overflow: hidden; background: var(--color-line-soft); border-radius: .5rem; }
+  .skel::after {
+    content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+}

@@ -1,0 +1,33 @@
+# Render Blueprint — The Nairobi Hospital, Admitting Rights Registry.
+#
+# The web service builds the Vite client and then serves both the static
+# bundle and the /api it talks to from one Node process. DATABASE_URL is
+# linked from the managed Postgres rather than pasted in, so the secret never
+# lives in the repo.
+
+databases:
+  - name: asa-db
+    databaseName: asa_db_3km2
+    user: asa_db_3km2_user
+    plan: free
+    region: oregon
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: asa-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: asa-db
+          property: connectionString
+      - key: NODE_VERSION
+        value: "22"
