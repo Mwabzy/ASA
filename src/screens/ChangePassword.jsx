@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from '../components/icons.jsx';
+import PasswordField from '../components/PasswordField.jsx';
 
 /* Shown instead of the registry when an account still carries the password it
    was created with. There is no way past it but to set a new one. */
@@ -54,21 +55,27 @@ export default function ChangePassword({ user, onChange, saving, error, onSignOu
             )}
 
             <div className="mt-5">
-              <label htmlFor="cp-current" className="mb-2 block text-[13px] font-medium text-ink">
-                Current password
-              </label>
-              <input id="cp-current" ref={ref} type="password" className="inp"
-                     value={current} onChange={e => setCurrent(e.target.value)}
-                     autoComplete="current-password" required />
+              <PasswordField
+                id="cp-current"
+                label="Current password"
+                value={current}
+                onChange={setCurrent}
+                autoComplete="current-password"
+                inputRef={ref}
+              />
             </div>
 
             <div className="mt-4">
-              <label htmlFor="cp-new" className="mb-2 block text-[13px] font-medium text-ink">
-                New password
-              </label>
-              <input id="cp-new" type="password" className={'inp'+(tooShort ? ' inp-err' : '')}
-                     value={next} onChange={e => setNext(e.target.value)}
-                     autoComplete="new-password" aria-describedby="cp-new-hint" required />
+              <PasswordField
+                id="cp-new"
+                label="New password"
+                value={next}
+                onChange={setNext}
+                autoComplete="new-password"
+                error={tooShort}
+                hint
+                hintId="cp-new-hint"
+              />
               <p id="cp-new-hint" className="mt-1.5 text-[11px] text-ink-52"
                  style={tooShort ? { color:'var(--color-inactive)' } : undefined}>
                 At least 12 characters.
@@ -76,12 +83,14 @@ export default function ChangePassword({ user, onChange, saving, error, onSignOu
             </div>
 
             <div className="mt-4">
-              <label htmlFor="cp-confirm" className="mb-2 block text-[13px] font-medium text-ink">
-                Confirm new password
-              </label>
-              <input id="cp-confirm" type="password" className={'inp'+(mismatch ? ' inp-err' : '')}
-                     value={confirm} onChange={e => setConfirm(e.target.value)}
-                     autoComplete="new-password" aria-invalid={mismatch} required />
+              <PasswordField
+                id="cp-confirm"
+                label="Confirm new password"
+                value={confirm}
+                onChange={setConfirm}
+                autoComplete="new-password"
+                error={mismatch}
+              />
               {mismatch && (
                 <p className="mt-1.5 text-[11px]" style={{ color:'var(--color-inactive)' }}>
                   The two passwords do not match.

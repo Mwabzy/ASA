@@ -19,6 +19,7 @@ const dist = join(here, '..', 'dist');
 const PORT = process.env.PORT || 3001;
 
 const app = express();
+app.set('trust proxy', 1);   /* Render terminates TLS at its proxy. */
 app.disable('x-powered-by');
 app.use(compression());
 app.use(express.json({ limit: '2mb' }));
@@ -89,14 +90,14 @@ app.post('/api/auth/login', wrap(async (req, res) => {
 
   throttleReset(email);
   const { token, expires } = await createSession(user.id);
-  setSessionCookie(res, token, expires);
+  setSessionCookie(req, res, token, expires);
   await query('UPDATE users SET last_login_at = now() WHERE id = $1', [user.id]);
   res.json({ user: publicUser(user) });
 }));
 
 app.post('/api/auth/logout', wrap(async (req, res) => {
   await destroySession(readCookie(req, SESSION_COOKIE));
-  clearSessionCookie(res);
+  clearSessionCookie(req, res);
   res.status(204).end();
 }));
 

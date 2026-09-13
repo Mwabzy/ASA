@@ -14,18 +14,19 @@
     "start": "node server/index.js",
     "migrate": "node server/migrate.js"
   },
+  "//": "The build toolchain sits in dependencies, not devDependencies: the host builds with NODE_ENV=production, where npm ci skips devDependencies and `vite` would not be found.",
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^5.1.0",
     "compression": "^1.8.0",
     "express": "^5.2.1",
     "pg": "^8.23.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@vitejs/plugin-react": "^5.1.0",
-    "concurrently": "^9.2.1",
+    "react-dom": "^19.3.0",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from '../components/icons.jsx';
+import PasswordField from '../components/PasswordField.jsx';
 
 /* The sign-in screen. Deliberately quiet: the mark, one card, nothing to
    explore. It is the only thing rendered until a session exists. */
@@ -76,17 +77,12 @@ export default function Login({ onSignIn, signingIn, error }){
             </div>
 
             <div className="mt-4">
-              <label htmlFor="login-password" className="mb-2 block text-[13px] font-medium text-ink">
-                Password
-              </label>
-              <input
+              <PasswordField
                 id="login-password"
-                type="password"
-                className="inp"
+                label="Password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={setPassword}
                 autoComplete="current-password"
-                required
               />
             </div>
 

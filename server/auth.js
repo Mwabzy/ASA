@@ -97,18 +97,23 @@ export function readCookie(req, name){
   return null;
 }
 
-export function setSessionCookie(res, token, expires){
-  const secure = process.env.NODE_ENV === 'production';
+/* Secure is taken from the request rather than NODE_ENV, so the flag is set
+   whenever the connection actually is HTTPS — behind Render's TLS proxy this
+   reads x-forwarded-proto — and left off for plain http on localhost, where a
+   Secure cookie would simply be dropped. */
+const isSecure = (req) => !!(req && req.secure);
+
+export function setSessionCookie(req, res, token, expires){
   res.append('Set-Cookie',
     COOKIE+'='+encodeURIComponent(token)+
     '; Path=/; HttpOnly; SameSite=Lax; Expires='+expires.toUTCString()+
-    (secure ? '; Secure' : ''));
+    (isSecure(req) ? '; Secure' : ''));
 }
 
-export function clearSessionCookie(res){
-  const secure = process.env.NODE_ENV === 'production';
+export function clearSessionCookie(req, res){
   res.append('Set-Cookie',
-    COOKIE+'=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'+(secure ? '; Secure' : ''));
+    COOKIE+'=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'+
+    (isSecure(req) ? '; Secure' : ''));
 }
 
 export const SESSION_COOKIE = COOKIE;
