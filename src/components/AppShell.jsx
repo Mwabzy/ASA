@@ -2,19 +2,20 @@ import { useEffect, useRef, useState, useId } from 'react';
 import { NAV } from '../lib/constants.js';
 import { ChevDown, Menu, Close, SignOut, Sync } from './icons.jsx';
 
-/* Placeholder logo slot — swap the mark for the hospital's own asset. */
+/* The Kenya Hospital Association roundel, over the hospital name as live text.
+   The mark carries the brand; the name stays text so it reflows on small
+   screens and stays crisp at any density. */
 function HospitalLogo(){
   return (
-    <span className="flex items-center gap-2.5 shrink-0">
-      <span
-        aria-hidden="true"
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand text-white"
-        data-logo-slot="nairobi-hospital"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M10 3h4v5h5v4h-5v5h-4v-5H5V8h5z" fill="currentColor"/>
-        </svg>
-      </span>
+    <span className="flex shrink-0 items-center gap-2.5">
+      <img
+        src="/logo-nairobi-hospital.png"
+        width="36"
+        height="36"
+        alt="The Nairobi Hospital"
+        className="h-9 w-9 shrink-0"
+        decoding="async"
+      />
       <span className="hidden leading-tight sm:block">
         <span className="block font-display text-[15px] font-bold tracking-tight text-navy">
           The Nairobi Hospital

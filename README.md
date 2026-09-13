@@ -130,3 +130,16 @@ pasted in. Pushes to `main` auto-deploy.
 
 Green and red carry status and are used for nothing else. Tokens live in
 `src/index.css` under `@theme`.
+
+### Logo
+
+`public/logo-nairobi-hospital.png` is the Kenya Hospital Association roundel,
+cropped from the hospital's own lockup and kept transparent. It is the header
+mark and the favicon. `public/logo-nairobi-hospital-lockup.png` is the full
+lockup — roundel over the wordmark — kept for print and anywhere the mark needs
+to stand alone.
+
+The header pairs the roundel with the hospital name as **live text** rather than
+using the lockup image, so the name reflows on narrow screens and stays crisp at
+any pixel density. The roundel's own reds (`#8B0304`) and gold (`#C07516`) sit
+within a shade of the brand tokens above, so the two read as one system.
