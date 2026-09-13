@@ -1,4 +1,6 @@
+import { motion } from 'motion/react';
 import { statusOf } from '../lib/status.js';
+import { cardItem, press, tween, DUR } from '../lib/motion.js';
 import { Eye, Pencil } from './icons.jsx';
 
 function Badge({ label, status, warn, dot, date }){
@@ -12,16 +14,29 @@ function Badge({ label, status, warn, dot, date }){
   );
 }
 
-export default function DoctorCard({ doctor, onOpen, onEdit, index = 0 }){
+/* The action buttons are revealed by the card's own hover and focus state
+   rather than by each button, so they arrive together. */
+const actions = {
+  rest:  { opacity: 0, y: -2 },
+  shown: { opacity: 1, y: 0 }
+};
+
+export default function DoctorCard({ doctor, onOpen, onEdit }){
   const st = statusOf(doctor);
   const kLabel = st.kWarn ? ('Active · '+st.k.days+'d') : st.k.status;
   const iLabel = st.iWarn ? ('Active · '+st.inv.days+'d') : st.inv.status;
   const name = (doctor.salutation ? doctor.salutation+' ' : '')+doctor.fullNames;
 
   return (
-    <article
-      className="group anim-rise relative rounded-[14px] border border-line bg-raised transition-[border-color,transform,box-shadow] hover:-translate-y-px hover:border-brand-edge hover:shadow-[0_6px_20px_rgba(10,10,35,.07)] focus-within:border-brand-edge"
-      style={{ animationDelay: Math.min(index,12)*30+'ms' }}
+    <motion.article
+      variants={cardItem}
+      initial="hidden"
+      animate="visible"
+      whileHover="shown"
+      whileFocus="shown"
+      whileTap={press}
+      transition={tween(DUR.quick)}
+      className="group relative rounded-[14px] border border-line bg-raised transition-[border-color,box-shadow] duration-150 hover:border-brand-edge hover:shadow-[0_6px_20px_rgba(10,10,35,.07)] focus-within:border-brand-edge"
     >
       {/* The whole card is the click target; the overlay link carries the label. */}
       <button
@@ -48,8 +63,14 @@ export default function DoctorCard({ doctor, onOpen, onEdit, index = 0 }){
         </div>
       </div>
 
-      {/* View / Edit appear on hover and on keyboard focus. */}
-      <div className="absolute right-3 top-3 z-20 flex gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+      {/* View / Edit appear on hover and on keyboard focus. focus-within keeps
+          them visible for anyone tabbing, who never triggers whileHover. */}
+      <motion.div
+        variants={actions}
+        initial="rest"
+        transition={tween(DUR.quick)}
+        className="absolute right-3 top-3 z-20 flex gap-1.5 focus-within:!opacity-100"
+      >
         <button
           type="button"
           onClick={() => onOpen(doctor)}
@@ -66,7 +87,7 @@ export default function DoctorCard({ doctor, onOpen, onEdit, index = 0 }){
         >
           <Pencil width="14" height="14" />
         </button>
-      </div>
-    </article>
+      </motion.div>
+    </motion.article>
   );
 }

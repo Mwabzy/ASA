@@ -107,11 +107,17 @@ export const OPTIONAL = ['poBox','subSpeciality','insuranceFrom','telephone','al
 export const WIDE = ['applicantType','quals','address','ref1','ref2','ref3','khaAck','categoryOther',
                      'docInsurance','docLicence','docCourses','docCv'];
 
-/* Navigation — real nav links, not a pill switcher. */
+/* Navigation — real nav links, not a pill switcher.
+   `admin` marks a section that only Admitting Office staff may see. Apply is
+   the public entry point and carries no flag. */
 export const NAV = [
   { key:'apply',    label:'Apply',    href:'#/apply' },
-  { key:'registry', label:'Registry', href:'#/registry' },
-  { key:'import',   label:'Import',   href:'#/import' }
+  { key:'registry', label:'Registry', href:'#/registry', admin:true },
+  { key:'import',   label:'Import',   href:'#/import',   admin:true }
 ];
+
+/* The sections a signed-out visitor may reach. Everything else redirects to
+   sign-in. Kept here so the client and the nav agree on one list. */
+export const PUBLIC_ROUTES = ['apply'];
 
 export const PAGE_SIZE = 12;

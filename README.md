@@ -16,6 +16,27 @@ npm run dev               # client on :5173, API on :3001
 `npm run dev` runs the Vite dev server and the API together; Vite proxies
 `/api` through to the API. For a production-shaped run: `npm run build && npm start`.
 
+The npm scripts load `.env` themselves (`node --env-file-if-exists=.env`), so
+there is nothing else to wire up — but the API exits immediately if
+`DATABASE_URL` is unset, and then Vite's proxy answers every `/api` call with a
+**502**. A 502 on the sign-in screen means the API is not running.
+
+### Postgres on Windows
+
+EnterpriseDB's installer downloads are blocked on some networks, so this machine
+runs the Postgres 16.15 server binaries published to Maven Central by
+`io.zonky.test.postgres` instead. They are unpacked at
+`C:\Users\<you>\.local\pgsql16` with the data directory at
+`C:\Users\<you>\.local\pgdata-asa`. Start the database before `npm run dev`:
+
+```
+"$HOME/.local/pgsql16/bin/pg_ctl" -D "$HOME/.local/pgdata-asa" \
+  -l "$HOME/.local/pgdata-asa/server.log" -o "-p 5432" start
+```
+
+That build ships the server only — no `psql` or `createdb`. Use the project's
+own `pg` client for one-off SQL.
+
 ---
 
 ## The two status rules

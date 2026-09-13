@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { api, UnauthorizedError } from './lib/api.js';
+import { PUBLIC_ROUTES } from './lib/constants.js';
 import { syncStamp } from './lib/dates.js';
 import { emptyForm, newId } from './lib/form.js';
 import AppShell from './components/AppShell.jsx';
@@ -12,12 +14,18 @@ import Success from './screens/Success.jsx';
 import Login from './screens/Login.jsx';
 import ChangePassword from './screens/ChangePassword.jsx';
 
-const ROUTES = ['apply','registry','import'];
+const ROUTES = ['apply','registry','import','signin'];
 
+/* Apply is the public front door, so an empty or unknown hash lands there
+   rather than on a staff section the visitor may not be able to open. */
 function routeFromHash(){
   const h = (window.location.hash || '').replace(/^#\/?/, '');
-  return ROUTES.indexOf(h)>=0 ? h : 'registry';
+  return ROUTES.indexOf(h)>=0 ? h : 'apply';
 }
+
+/* Sign-in is neither public nor an Admitting Office section — it is the way in
+   to one, so it is excluded from both lists. */
+const isAdminRoute = (r) => r!=='signin' && PUBLIC_ROUTES.indexOf(r)<0;
 
 export default function App(){
   const [route, setRoute]       = useState(routeFromHash);
@@ -58,7 +66,7 @@ export default function App(){
   useEffect(() => {
     const onHash = () => setRoute(routeFromHash());
     window.addEventListener('hashchange', onHash);
-    if(!window.location.hash) window.location.replace('#/registry');
+    if(!window.location.hash) window.location.replace('#/apply');
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
@@ -78,6 +86,11 @@ export default function App(){
     if(key!=='import'){ setImpSummary(null); setCommitError(''); }
   }, []);
 
+  /* A signed-in visitor has no use for the sign-in screen; send them on. */
+  useEffect(() => {
+    if(user && route==='signin') navigate('registry');
+  }, [user, route, navigate]);
+
   /* ---- session ----
      Nothing else runs until the service confirms who is signed in. */
   useEffect(() => {
@@ -93,6 +106,9 @@ export default function App(){
     try {
       const r = await api.login(email, password);
       setUser(r.user);
+      /* Sign-in demanded by an admin section returns to the section that was
+         asked for; sign-in reached from the staff link opens the registry. */
+      if(!isAdminRoute(route)) navigate('registry');
     } catch (e) {
       setAuthError(e.message);
     } finally {
@@ -107,6 +123,8 @@ export default function App(){
     setSelected(null);
     setBatchIds(null);
     setAuthError('');
+    /* Signing out drops you back on the public application, not a dead end. */
+    navigate('apply');
   };
 
   const changePassword = async (currentPassword, newPassword) => {
@@ -211,7 +229,8 @@ export default function App(){
   };
 
   /* ---- gates ----
-     The registry is never rendered without a session. */
+     Apply is public. Registry and Import belong to the Admitting Office and are
+     never rendered without a session. */
 
   if(!authChecked){
     return (
@@ -223,11 +242,19 @@ export default function App(){
     );
   }
 
-  if(!user){
-    return <Login onSignIn={signIn} signingIn={signingIn} error={authError} />;
+  if(!user && (route==='signin' || isAdminRoute(route))){
+    return (
+      <Login
+        onSignIn={signIn}
+        signingIn={signingIn}
+        error={authError}
+        section={isAdminRoute(route) ? route : null}
+        onBack={() => navigate('apply')}
+      />
+    );
   }
 
-  if(user.mustChangePassword){
+  if(user && user.mustChangePassword){
     return (
       <ChangePassword
         user={user}
@@ -239,15 +266,21 @@ export default function App(){
     );
   }
 
+  /* Signed in, the sign-in screen is not a place to be. `view` keeps the render
+     on the registry while the effect above rewrites the hash, so there is no
+     blank frame in between. */
+  const view = route==='signin' ? 'registry' : route;
+
   return (
     <AppShell
-      route={route}
+      route={view}
       onNavigate={navigate}
       user={user}
       onSignOut={signOut}
+      onSignIn={() => navigate('signin')}
       lastSynced={lastSynced}
     >
-      {route==='registry' && (
+      {view==='registry' && (
         <Registry
           doctors={doctors}
           loading={loading}
@@ -262,11 +295,12 @@ export default function App(){
         />
       )}
 
-      {route==='apply' && (
+      {view==='apply' && (
         submitted
           ? <Success
               record={submitted}
               editing={!!editing}
+              isPublic={!user}
               onAnother={() => { startApply(); }}
               onNavigate={navigate}
             />
@@ -275,13 +309,14 @@ export default function App(){
               setForm={setForm}
               doctors={doctors}
               editing={!!editing}
+              isPublic={!user}
               onSubmit={submit}
               submitting={submitting}
               submitError={submitError}
             />
       )}
 
-      {route==='import' && (
+      {view==='import' && (
         <Import
           doctors={doctors}
           onCommit={commitImport}
@@ -293,15 +328,22 @@ export default function App(){
         />
       )}
 
-      {selected && (
-        <DoctorDetail
-          doctor={selected}
-          onClose={() => setSelected(null)}
-          onEdit={startEdit}
-        />
-      )}
+      {/* Both of these are dismissed by state going away, so they need to stay
+          mounted long enough to animate out. */}
+      <AnimatePresence>
+        {selected && (
+          <DoctorDetail
+            key="detail"
+            doctor={selected}
+            onClose={() => setSelected(null)}
+            onEdit={startEdit}
+          />
+        )}
+      </AnimatePresence>
 
-      {toast && <Toast text={toast.text} tone={toast.tone} />}
+      <AnimatePresence>
+        {toast && <Toast key="toast" text={toast.text} tone={toast.tone} />}
+      </AnimatePresence>
     </AppShell>
   );
 }

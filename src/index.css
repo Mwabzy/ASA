@@ -112,9 +112,12 @@
     padding: .8125rem 1.125rem; border-radius: .75rem; border: 1px solid transparent;
     background: var(--color-brand); color: #fff; font-size: .9375rem; font-weight: 600;
     font-family: var(--font-sans); cursor: pointer;
-    transition: background .15s ease, border-color .15s ease;
+    transition: background .15s ease, border-color .15s ease, transform .12s ease;
   }
   .btn:hover:not(:disabled) { background: var(--color-brand-hover); }
+  /* Every button acknowledges the press. Shallow on purpose — below .98 at
+     this size it reads as the control breaking rather than responding. */
+  .btn:active:not(:disabled) { transform: scale(.985); }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
   .btn-ghost { background: transparent; border-color: var(--color-line); color: var(--color-ink); }
   .btn-ghost:hover:not(:disabled) { background: var(--color-raised); border-color: var(--color-brand-edge); }

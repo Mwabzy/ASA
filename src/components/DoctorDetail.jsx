@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 import { parse, fmt, diffDays } from '../lib/dates.js';
 import { kmpdc, insurance, dotFor, statusColor } from '../lib/status.js';
 import Mascot from './Mascot.jsx';
@@ -26,6 +27,24 @@ function detailGroups(d){
       ['Practice licence',docs('docLicence'),'ui'],
       ['Course certificates',docs('docCourses'),'ui']]}
   ];
+}
+
+/* The panel is a bottom sheet on a phone and a right-hand drawer from `sm` up,
+   so it has to enter along a different axis at each size. The stylesheet did
+   that with two utilities and a breakpoint; an animation driven from JS has to
+   pick the axis itself. */
+function useWideLayout(){
+  const [wide, setWide] = useState(
+    () => typeof window!=='undefined' && window.matchMedia('(min-width: 640px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)');
+    const onChange = (e) => setWide(e.matches);
+    setWide(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return wide;
 }
 
 /* A timeline per status showing where today sits between issue and expiry. */
@@ -70,6 +89,7 @@ function StatusBlock({ label, v, rule, startLabel, startDate, endLabel, endDate,
 export default function DoctorDetail({ doctor, onClose, onEdit }){
   const panel = useRef(null);
   const restoreTo = useRef(null);
+  const wide = useWideLayout();
 
   useEffect(() => {
     restoreTo.current = document.activeElement;
@@ -95,22 +115,33 @@ export default function DoctorDetail({ doctor, onClose, onEdit }){
     : ((k.status==='Not recorded'&&inv.status==='Not recorded') ? 'idle' : 'done');
   const name = (doctor.salutation ? doctor.salutation+' ' : '')+doctor.fullNames;
 
+  /* Off-screen along whichever edge the panel is attached to. */
+  const offscreen = wide ? { x:'100%', y:0 } : { x:0, y:'100%' };
+
   return (
     <div className="fixed inset-0 z-50">
-      <button
+      <motion.button
         type="button"
         aria-label="Close detail"
         onClick={onClose}
-        className="anim-in absolute inset-0 bg-[rgba(10,10,35,.45)]"
+        initial={{ opacity:0 }}
+        animate={{ opacity:1 }}
+        exit={{ opacity:0 }}
+        transition={{ duration:.2, ease:'linear' }}
+        className="absolute inset-0 bg-[rgba(10,10,35,.45)]"
       />
 
-      <div
+      <motion.div
         ref={panel}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={name+' — registry record'}
-        className="anim-sheet absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-2xl border-t border-line bg-surface shadow-[0_-20px_60px_rgba(10,10,35,.16)] outline-none sm:anim-drawer sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[min(30rem,100%)] sm:rounded-none sm:rounded-l-2xl sm:border-l sm:border-t-0"
+        initial={offscreen}
+        animate={{ x:0, y:0 }}
+        exit={offscreen}
+        transition={{ duration:.34, ease:[.22,1,.36,1] }}
+        className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-2xl border-t border-line bg-surface shadow-[0_-20px_60px_rgba(10,10,35,.16)] outline-none sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[min(30rem,100%)] sm:rounded-none sm:rounded-l-2xl sm:border-l sm:border-t-0"
       >
         <header className="flex shrink-0 items-start gap-3 border-b border-line px-5 pb-4 pt-5">
           <div className="-mt-1.5 shrink-0"><Mascot name={mascot} size={60} /></div>
@@ -167,7 +198,7 @@ export default function DoctorDetail({ doctor, onClose, onEdit }){
             startD={parse(doctor.insuranceFrom)} endD={inv.coverTo}
           />
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

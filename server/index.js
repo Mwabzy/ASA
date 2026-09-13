@@ -130,8 +130,9 @@ app.post('/api/auth/password', requireUser, wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-/* From here on, a session is required. */
-app.use('/api/doctors', requireActiveUser);
+/* From here on a session is required. The one exception is POST /api/doctors,
+   the public application form, so /api/doctors is gated per-route rather than
+   with a blanket mount. */
 app.use('/api/meta', requireActiveUser);
 
 app.get('/api/meta', wrap(async (_req, res) => {
@@ -142,13 +143,16 @@ app.get('/api/meta', wrap(async (_req, res) => {
   });
 }));
 
-app.get('/api/doctors', wrap(async (_req, res) => {
+app.get('/api/doctors', requireActiveUser, wrap(async (_req, res) => {
   /* Sorting into expiry order is the client's job — the rule is computed,
      not stored, so it cannot be expressed as an ORDER BY here. */
   const { rows } = await query(SELECT_ALL+' ORDER BY created_at DESC');
   res.json(rows.map(fromRow));
 }));
 
+/* Public. This is the admitting-rights application the doctor fills in
+   themselves; it is the only write on the registry that does not need a
+   session. Reading the register still does. */
 app.post('/api/doctors', wrap(async (req, res) => {
   const bad = assertRecord(req.body);
   if(bad) return fail(res, 400, bad);
@@ -158,7 +162,7 @@ app.post('/api/doctors', wrap(async (req, res) => {
   res.status(201).json(fromRow(rows[0]));
 }));
 
-app.put('/api/doctors/:id', wrap(async (req, res) => {
+app.put('/api/doctors/:id', requireActiveUser, wrap(async (req, res) => {
   const bad = assertRecord(req.body);
   if(bad) return fail(res, 400, bad);
 
@@ -170,7 +174,7 @@ app.put('/api/doctors/:id', wrap(async (req, res) => {
 /* Bulk import. Each row carries the caller's duplicate decision; a row marked
    "skip" that already exists is left alone, "overwrite" replaces it in place.
    The whole batch commits or none of it does. */
-app.post('/api/doctors/bulk', wrap(async (req, res) => {
+app.post('/api/doctors/bulk', requireActiveUser, wrap(async (req, res) => {
   const rows = Array.isArray(req.body && req.body.rows) ? req.body.rows : null;
   if(!rows) return fail(res, 400, 'Expected a rows array.');
   if(rows.length > 5000) return fail(res, 413, 'That file is too large to import in one go.');

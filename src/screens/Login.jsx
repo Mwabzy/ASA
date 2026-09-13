@@ -2,9 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert } from '../components/icons.jsx';
 import PasswordField from '../components/PasswordField.jsx';
 
+const SECTION_COPY = {
+  registry: 'The registry is restricted to Admitting Office staff.',
+  import:   'Importing doctors is restricted to Admitting Office staff.'
+};
+
 /* The sign-in screen. Deliberately quiet: the mark, one card, nothing to
-   explore. It is the only thing rendered until a session exists. */
-export default function Login({ onSignIn, signingIn, error }){
+   explore. `section` names the staff section that asked for a session, so the
+   card can say why it appeared; without one this is the staff link from the
+   public application. */
+export default function Login({ onSignIn, signingIn, error, section, onBack }){
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const emailRef = useRef(null);
@@ -43,7 +50,7 @@ export default function Login({ onSignIn, signingIn, error }){
           >
             <h2 className="text-[15px] font-semibold text-navy">Sign in</h2>
             <p className="mt-1 text-[12.5px] leading-relaxed text-ink-52">
-              This registry is restricted to Admitting Office staff.
+              {SECTION_COPY[section] || 'This registry is restricted to Admitting Office staff.'}
             </p>
 
             {error && (
@@ -95,6 +102,18 @@ export default function Login({ onSignIn, signingIn, error }){
               not self-service.
             </p>
           </form>
+
+          {onBack && (
+            <p className="mt-6 text-center text-[12.5px]">
+              <button
+                type="button"
+                onClick={onBack}
+                className="font-semibold text-brand hover:underline"
+              >
+                Applying for admitting rights? Start here
+              </button>
+            </p>
+          )}
 
           <p className="mt-6 text-center text-[11.5px] text-ink-52">
             The Nairobi Hospital · Kenya Hospital Association

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { iconSwap, press } from '../lib/motion.js';
 import { Eye, EyeOff } from './icons.jsx';
 
 /* A password input with a show/hide toggle.
@@ -35,7 +37,7 @@ export default function PasswordField({
           aria-describedby={hint ? hintId : undefined}
           required={required}
         />
-        <button
+        <motion.button
           type="button"
           onClick={() => setShown(v => !v)}
           aria-pressed={shown}
@@ -43,10 +45,24 @@ export default function PasswordField({
           aria-label={shown ? 'Hide password' : 'Show password'}
           title={shown ? 'Hide password' : 'Show password'}
           tabIndex={-1}
+          whileTap={press}
           className="absolute right-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-ink-52 transition-colors hover:bg-line-soft hover:text-ink"
         >
-          {shown ? <EyeOff width="16" height="16" /> : <Eye width="16" height="16" />}
-        </button>
+          {/* Both icons occupy the same grid cell, so they cross over in place
+              instead of the button reflowing mid-swap. */}
+          <AnimatePresence initial={false} mode="popLayout">
+            <motion.span
+              key={shown ? 'off' : 'on'}
+              variants={iconSwap}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="col-start-1 row-start-1 flex"
+            >
+              {shown ? <EyeOff width="16" height="16" /> : <Eye width="16" height="16" />}
+            </motion.span>
+          </AnimatePresence>
+        </motion.button>
       </div>
     </div>
   );

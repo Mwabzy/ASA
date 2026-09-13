@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 import { APPLICANT_TYPES } from '../lib/constants.js';
 import { parse, fmt } from '../lib/dates.js';
 import { kmpdc, insurance, dotFor } from '../lib/status.js';
@@ -144,7 +145,90 @@ function reviewGroups(form){
   return { groups, kv, iv };
 }
 
-export default function Apply({ form, setForm, doctors, editing, onSubmit, submitting, submitError }){
+/* The welcome arrives one element at a time rather than all at once — the
+   easing matches the cubic-bezier the stylesheet uses everywhere else, so the
+   JS-driven entrance and the CSS ones read as the same hand. */
+const EASE = [.22, 1, .36, 1];
+
+const heroGroup = { hidden:{}, shown:{ transition:{ staggerChildren:.07, delayChildren:.05 } } };
+const heroItem  = {
+  hidden:{ opacity:0, y:12 },
+  shown: { opacity:1, y:0, transition:{ duration:.42, ease:EASE } }
+};
+/* The mark settles rather than slides — it is the first thing on the page. */
+const heroMark  = {
+  hidden:{ opacity:0, y:6, scale:.92 },
+  shown: { opacity:1, y:0, scale:1, transition:{ duration:.5, ease:EASE } }
+};
+/* The accent rule draws itself out from the centre. */
+const heroRule  = {
+  hidden:{ opacity:0, scaleX:0 },
+  shown: { opacity:1, scaleX:1, transition:{ duration:.45, ease:EASE } }
+};
+
+/* ---------- public welcome ----------
+   A member of the public arriving at the application has no idea what ASA is,
+   and opening on "STEP 1 OF 15" reads as a form to be endured. Staff, who come
+   here to register or edit a doctor they already know about, keep the plain
+   step header. */
+function WelcomeHero({ question }){
+  const points = [
+    ['About ten minutes', 'You can go back at any point, and nothing is sent until the final review.'],
+    ['Have your documents ready', 'Indemnity insurance, practice licence, course certificates and a current C.V.'],
+    ['Not a public register', 'Your answers go to the Admitting Office. Nobody else can read them here.']
+  ];
+
+  return (
+    <div className="mx-auto w-full max-w-[1440px] px-4 pt-10 sm:px-6 lg:px-10">
+      <motion.div
+        variants={heroGroup}
+        initial="hidden"
+        animate="shown"
+        className="mx-auto flex w-full max-w-[920px] flex-col items-center text-center"
+      >
+        <motion.div variants={heroMark}>
+          <Mascot name="greeting" size={128} />
+        </motion.div>
+
+        <motion.span variants={heroItem} className="eyebrow mt-4">
+          THE NAIROBI HOSPITAL · KENYA HOSPITAL ASSOCIATION
+        </motion.span>
+        <motion.h1 variants={heroItem} className="mt-2.5 text-[32px] leading-[1.05] sm:text-[40px]">
+          Welcome to ASA
+        </motion.h1>
+        <motion.div
+          variants={heroRule}
+          aria-hidden="true"
+          className="my-4 h-[3px] rounded-sm bg-accent"
+          style={{ width:'52px' }}
+        />
+
+        <motion.p variants={heroItem} className="max-w-[34rem] text-[15px] leading-relaxed text-ink-72">
+          Admitting rights let a specialist admit and care for their own patients
+          at The Nairobi Hospital. This is where you apply for them — and where a
+          doctor already admitted keeps their record current.
+        </motion.p>
+
+        {/* The cards carry their own stagger, so they land in reading order
+            after the paragraph rather than as one block. */}
+        <motion.ul variants={heroGroup} className="mt-7 grid w-full gap-2.5 text-left sm:grid-cols-3">
+          {points.map(([title, body]) => (
+            <motion.li key={title} variants={heroItem} className="card">
+              <h3 className="kicker mb-1.5">{title}</h3>
+              <p className="text-[12.5px] leading-relaxed text-ink-72">{body}</p>
+            </motion.li>
+          ))}
+        </motion.ul>
+
+        <motion.h2 variants={heroItem} className="mt-9 text-[18px] font-semibold text-navy">
+          {question}
+        </motion.h2>
+      </motion.div>
+    </div>
+  );
+}
+
+export default function Apply({ form, setForm, doctors, editing, isPublic, onSubmit, submitting, submitError }){
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const [animKey, setAnimKey] = useState(0);
@@ -268,8 +352,13 @@ export default function Apply({ form, setForm, doctors, editing, onSubmit, submi
 
   const review = isReview ? reviewGroups(form) : null;
 
+  /* The welcome step only introduces ASA when there is nobody signed in and no
+     record already loaded into the wizard. */
+  const welcome = isPublic && !editing && current===0;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {welcome ? <WelcomeHero question={st.sub} /> : (
       <div className="mx-auto w-full max-w-[1440px] px-4 pt-6 sm:px-6 lg:px-10">
         <div className="mx-auto flex w-full max-w-[920px] items-center justify-between">
           <span className="eyebrow">
@@ -294,6 +383,7 @@ export default function Apply({ form, setForm, doctors, editing, onSubmit, submi
           <div className="hidden shrink-0 sm:block"><Mascot name={st.pose} size={86} /></div>
         </div>
       </div>
+      )}
 
       {/* ---- step body ---- */}
       <div key={animKey} className={'min-h-0 flex-1 px-4 pb-8 pt-6 sm:px-6 lg:px-10 '+(dir>0 ? 'anim-fwd' : 'anim-bwd')}>

@@ -1,3 +1,4 @@
+import { motion } from 'motion/react';
 import Mascot from './Mascot.jsx';
 import { Alert, Refresh } from './icons.jsx';
 
@@ -93,16 +94,24 @@ export function ErrorState({ title = 'The registry could not be loaded', message
 
 /* ---------- toast ---------- */
 
+/* Rendered inside an <AnimatePresence> so it can leave as deliberately as it
+   arrives — a toast that blinks out of existence reads as a glitch.
+   Centring moves from the -translate-x-1/2 class into motion's own `x`, because
+   an inline transform would otherwise overwrite the utility. */
 export function Toast({ text, tone = 'ok' }){
   const colour = tone==='bad' ? 'var(--color-inactive)' : 'var(--color-active)';
   return (
-    <div
+    <motion.div
       role="status"
       aria-live="polite"
-      className="anim-rise fixed bottom-7 left-1/2 z-[70] flex -translate-x-1/2 items-center gap-2.5 whitespace-nowrap rounded-xl border border-accent bg-surface px-4 py-2.5 shadow-[0_10px_30px_rgba(10,10,35,.18)]"
+      initial={{ opacity:0, x:'-50%', y:14, scale:.96 }}
+      animate={{ opacity:1, x:'-50%', y:0,  scale:1 }}
+      exit={{    opacity:0, x:'-50%', y:8,  scale:.98 }}
+      transition={{ duration:.26, ease:[.22,1,.36,1] }}
+      className="fixed bottom-7 left-1/2 z-[70] flex items-center gap-2.5 whitespace-nowrap rounded-xl border border-accent bg-surface px-4 py-2.5 shadow-[0_10px_30px_rgba(10,10,35,.18)]"
     >
       <span className="dot" style={{ background: colour }} />
       <span className="text-[13px] font-medium text-ink">{text}</span>
-    </div>
+    </motion.div>
   );
 }

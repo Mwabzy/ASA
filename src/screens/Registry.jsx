@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 import { CATEGORIES, DIVISIONS, PAGE_SIZE } from '../lib/constants.js';
+import { staggerGroup } from '../lib/motion.js';
 import { kmpdc, insurance, statusOf } from '../lib/status.js';
 import { reduced } from '../lib/dates.js';
 import { exportCsv } from '../lib/csv.js';
@@ -225,11 +227,20 @@ export default function Registry({
             <div className="mt-5">
               {visible.length ? (
                 <>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {visible.map((d,i) => (
-                      <DoctorCard key={d.id} doctor={d} index={i} onOpen={onOpen} onEdit={onEdit} />
+                  {/* Keyed on the page and filters so a new set of results
+                      re-runs the stagger — otherwise paging swaps the contents
+                      underneath a grid that has already finished animating. */}
+                  <motion.div
+                    key={current+'|'+lens+'|'+catFilter+'|'+divFilter+'|'+query}
+                    variants={staggerGroup()}
+                    initial="hidden"
+                    animate="visible"
+                    className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                  >
+                    {visible.map(d => (
+                      <DoctorCard key={d.id} doctor={d} onOpen={onOpen} onEdit={onEdit} />
                     ))}
-                  </div>
+                  </motion.div>
 
                   {pageCount > 1 && (
                     <nav aria-label="Registry pages" className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">

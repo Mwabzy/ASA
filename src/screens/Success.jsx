@@ -1,6 +1,6 @@
 import Mascot from '../components/Mascot.jsx';
 
-export default function Success({ record, editing, onAnother, onNavigate }){
+export default function Success({ record, editing, isPublic, onAnother, onNavigate }){
   const applying = record.applicantType==='new';
   const who = (record.salutation ? record.salutation+' ' : '') + (record.fullNames || 'The doctor');
 
@@ -17,13 +17,21 @@ export default function Success({ record, editing, onAnother, onNavigate }){
       <h1 className="mt-2 text-[30px]">{title}</h1>
       <div aria-hidden="true" className="my-2.5 h-[3px] w-13 rounded-sm bg-accent" style={{ width:'52px' }} />
       <p className="max-w-md text-[15px] leading-relaxed text-ink-72">{body}</p>
+      {/* The registry is staff-only, so a member of the public is offered the
+          one thing they can actually do next. */}
       <div className="mt-6 flex w-full max-w-[320px] gap-2.5">
-        <button type="button" className="btn btn-ghost btn-sm flex-1 py-3" onClick={onAnother}>
-          {applying ? 'New application' : 'Register another'}
+        <button
+          type="button"
+          className={'btn btn-sm flex-1 py-3'+(isPublic ? '' : ' btn-ghost')}
+          onClick={onAnother}
+        >
+          {applying ? 'New application' : (isPublic ? 'Submit another' : 'Register another')}
         </button>
-        <button type="button" className="btn btn-sm flex-1 py-3" onClick={() => onNavigate('registry')}>
-          View registry
-        </button>
+        {!isPublic && (
+          <button type="button" className="btn btn-sm flex-1 py-3" onClick={() => onNavigate('registry')}>
+            View registry
+          </button>
+        )}
       </div>
     </div>
   );
