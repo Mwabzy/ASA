@@ -108,10 +108,13 @@ export const WIDE = ['applicantType','quals','address','ref1','ref2','ref3','kha
                      'docInsurance','docLicence','docCourses','docCv'];
 
 /* Navigation — real nav links, not a pill switcher.
-   `admin` marks a section that only Admitting Office staff may see. Apply is
-   the public entry point and carries no flag. */
+   `admin` marks a section only Admitting Office staff may see; `publicOnly`
+   marks one that disappears once they sign in. Apply is the public front door,
+   so it is the visitor's only link and is not a staff section — staff still
+   reach the form itself by editing a doctor or from the empty registry, just
+   not as a standing tab. */
 export const NAV = [
-  { key:'apply',    label:'Apply',    href:'#/apply' },
+  { key:'apply',    label:'Apply',    href:'#/apply',    publicOnly:true },
   { key:'registry', label:'Registry', href:'#/registry', admin:true },
   { key:'import',   label:'Import',   href:'#/import',   admin:true }
 ];

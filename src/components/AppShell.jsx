@@ -110,11 +110,13 @@ function UserMenu({ user, onSignOut }){
 
 /* `user` is null for a member of the public filling in an application. The
    shell then drops everything internal — the staff sections, the KMPDC sync
-   stamp, the account menu — and offers the way in to staff instead. */
+   stamp, the account menu — and offers the way in to staff instead. Signing in
+   swaps the lists the other way: Apply is the visitor's front door, not a staff
+   destination, so it leaves the bar and Registry and Import take its place. */
 export default function AppShell({ route, onNavigate, user, onSignOut, onSignIn, lastSynced, children }){
   const [mobileNav, setMobileNav] = useState(false);
 
-  const items = NAV.filter(item => !item.admin || user);
+  const items = NAV.filter(item => (!item.admin || user) && (!item.publicOnly || !user));
   /* One section is not a navigation bar; the public shell simply omits it. */
   const showNav = items.length > 1;
 
