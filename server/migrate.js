@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { pool, withTransaction } from './db.js';
 import { toRow, INSERT_SQL } from './record.js';
+import { createHash } from 'node:crypto';
 import { hashPassword, generatePassword } from './auth.js';
 import { seed } from '../src/lib/seed.js';
 
@@ -46,15 +47,34 @@ async function seedAdmin(){
    database may not accept external connections at all.
 
    Set ADMIN_PASSWORD_RESET=true together with SEED_ADMIN_PASSWORD and the
-   account is put back to a known password on the next boot. Both variables
-   should be removed once you are in: the reset is idempotent and harmless to
-   repeat, but leaving a live password in the service environment is not. */
+   account is put back to a known password on the next boot.
+
+   It fires ONCE per distinct password. An earlier version reset on every boot
+   for as long as the flag was set, which quietly undid the password the user
+   then chose: a free instance sleeps and cold-starts on the next request, so
+   migrate() runs far more often than a deploy and every run wound the account
+   back. A marker in registry_meta records which password has been applied, so
+   a restart is now a no-op. Changing SEED_ADMIN_PASSWORD to a new value arms
+   it again, which is the one case where repeating is what was asked for.
+
+   Remove both variables once you are in regardless — a live password should
+   not sit in the service environment. */
 async function resetAdmin(){
   if(process.env.ADMIN_PASSWORD_RESET !== 'true') return;
 
   const password = process.env.SEED_ADMIN_PASSWORD;
   if(!password){
     console.warn('ADMIN_PASSWORD_RESET is set but SEED_ADMIN_PASSWORD is empty — nothing to reset.');
+    return;
+  }
+
+  /* Keyed on the password, never storing it: a marker that changes when the
+     variable changes, and reveals nothing if the table is read. */
+  const marker = createHash('sha256').update('admin-reset:'+password).digest('hex');
+  const seen = await pool.query(`SELECT value FROM registry_meta WHERE key = 'admin_password_reset'`);
+  if(seen.rows.length && seen.rows[0].value === marker){
+    console.log('ADMIN_PASSWORD_RESET: this password has already been applied — skipping.');
+    console.log('Remove ADMIN_PASSWORD_RESET and SEED_ADMIN_PASSWORD from the environment.');
     return;
   }
 
@@ -94,8 +114,16 @@ async function resetAdmin(){
   /* Matches what a normal password change does: every existing session ends. */
   await pool.query('DELETE FROM sessions WHERE user_id = $1', [target.id]);
 
+  /* Written only after the reset succeeds, so a failure part-way leaves it
+     armed rather than marking work that never happened. */
+  await pool.query(
+    `INSERT INTO registry_meta (key, value) VALUES ('admin_password_reset', $1)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+    [marker]
+  );
+
   console.log('Reset the password for '+target.email+'. It must be changed at first sign-in.');
-  console.log('Remove ADMIN_PASSWORD_RESET and SEED_ADMIN_PASSWORD from the environment now.');
+  console.log('This will not repeat on restart. Remove ADMIN_PASSWORD_RESET and SEED_ADMIN_PASSWORD now.');
 }
 
 export async function migrate(){
