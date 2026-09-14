@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  TARGETS, IMP_REQ, SAMPLE, parseCSV, autoMap, impResults, unmappedRequired
+  TARGETS, IMP_REQ, SAMPLE, parseCSV, parseExcel, isExcelFile, autoMap, impResults, unmappedRequired
 } from '../lib/importer.js';
 import { downloadTemplate, downloadErrors } from '../lib/csv.js';
 import Mascot from '../components/Mascot.jsx';
@@ -13,6 +13,7 @@ const blankImp = { stage:0, over:false, fileName:'', headers:[], rows:[], map:{}
 
 export default function Import({ doctors, onCommit, committing, commitError, summary, onViewImported, onCancel }){
   const [imp, setImp] = useState(blankImp);
+  const [readError, setReadError] = useState('');
 
   const results = useMemo(
     () => (imp.headers.length ? impResults(imp, doctors) : []),
@@ -21,17 +22,46 @@ export default function Import({ doctors, onCommit, committing, commitError, sum
 
   const stage = summary ? 3 : imp.stage;
 
+  const accept = (file, parsed) => {
+    if(!parsed.headers.length){
+      setReadError('No columns could be read from '+file.name+'. Check the first row holds the column headings.');
+      setImp(s => ({ ...s, over:false }));
+      return;
+    }
+    setReadError('');
+    setImp(s => ({ ...s, stage:1, over:false, fileName:file.name,
+                   headers:parsed.headers, rows:parsed.rows,
+                   map:autoMap(parsed.headers), dups:{} }));
+  };
+
+  /* Excel is read by the file object itself; CSV still goes through FileReader
+     as text. Both land on the same { headers, rows }, so only the reading
+     differs — the mapping step that follows cannot tell them apart. */
   const loadFile = (file) => {
     if(!file) return;
+    setReadError('');
+
+    if(isExcelFile(file)){
+      setImp(s => ({ ...s, over:false }));
+      parseExcel(file)
+        .then(parsed => accept(file, parsed))
+        .catch(() => {
+          setReadError(/\.xls$/i.test(file.name)
+            ? 'That is the older .xls format, which cannot be read here. Open it in Excel and use Save As → .xlsx.'
+            : 'That spreadsheet could not be read. If it opens in Excel, try Save As → .xlsx and import again.');
+          setImp(s => ({ ...s, over:false }));
+        });
+      return;
+    }
+
     const r = new FileReader();
     r.onload = () => {
       let parsed;
       try { parsed = parseCSV(String(r.result)); }
       catch (e) { parsed = { headers:[], rows:[] }; }
-      setImp(s => ({ ...s, stage:1, over:false, fileName:file.name,
-                     headers:parsed.headers, rows:parsed.rows,
-                     map:autoMap(parsed.headers), dups:{} }));
+      accept(file, parsed);
     };
+    r.onerror = () => setReadError('That file could not be read.');
     r.readAsText(file);
   };
 
@@ -93,6 +123,13 @@ export default function Import({ doctors, onCommit, committing, commitError, sum
       </div>
 
       <div className="mx-auto w-full max-w-[920px] pt-6">
+        {readError && (
+          <p role="alert" className="mb-4 rounded-xl border px-4 py-3 text-[13px]"
+             style={{ color:'var(--color-inactive)', borderColor:'var(--color-inactive)', background:'rgba(220,38,38,.04)' }}>
+            {readError}
+          </p>
+        )}
+
         {commitError && (
           <p role="alert" className="mb-4 rounded-xl border px-4 py-3 text-[13px]"
              style={{ color:'var(--color-inactive)', borderColor:'var(--color-inactive)', background:'rgba(220,38,38,.04)' }}>
@@ -113,11 +150,12 @@ export default function Import({ doctors, onCommit, committing, commitError, sum
               }
             >
               <Download width="40" height="40" strokeWidth="1.6" className="text-brand" />
-              <span className="text-[15px] font-semibold text-ink">Drop a CSV here</span>
-              <span className="text-[12px] text-ink-52">or click to choose a file</span>
+              <span className="text-[15px] font-semibold text-ink">Drop a CSV or Excel file here</span>
+              <span className="text-[12px] text-ink-52">or click to choose a file · .csv, .xlsx, .xlsm</span>
               <input
-                type="file" accept=".csv,text/csv"
-                aria-label="Choose a CSV file to import"
+                type="file"
+                accept=".csv,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12"
+                aria-label="Choose a CSV or Excel file to import"
                 className="absolute inset-0 cursor-pointer opacity-0"
                 onChange={e => { loadFile(e.target.files && e.target.files[0]); e.target.value=''; }}
               />

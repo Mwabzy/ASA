@@ -1,7 +1,11 @@
-/* CSV import pipeline — ported verbatim.
+/* Import pipeline for CSV and Excel.
    The file's own Status column is deliberately ignored: KMPDC and insurance
    status are always recomputed from the dates, so a stale spreadsheet cannot
-   mark a lapsed doctor as active. */
+   mark a lapsed doctor as active.
+
+   Both readers produce the same { headers, rows } of plain strings, so
+   everything downstream — mapping, validation, editing, commit — is unaware of
+   which format the file arrived in. */
 import { pad2, iso } from './dates.js';
 import { validate, formatContact } from './validate.js';
 
@@ -51,6 +55,68 @@ export function parseCSV(text){
     return out.map(x => x.trim());
   }
   return { headers: parseLine(lines[0]||''), rows: lines.slice(1).map(parseLine) };
+}
+
+/* .xls is included deliberately even though the reader cannot open it: routing
+   it here means a dragged-in legacy file gets told to re-save as .xlsx, rather
+   than falling through to the CSV reader and producing a screen of nonsense. */
+export const EXCEL_EXT = /\.(xlsx|xlsm|xls)$/i;
+export const isExcelFile = (file) => !!file && EXCEL_EXT.test(file.name || '');
+
+/* A spreadsheet cell is not text. Excel hands back a Date for anything the
+   sheet formats as a date, and a number for a year or a registration number
+   that happens to be numeric — so each is brought back to the string the rest
+   of the pipeline expects, rather than letting String() decide.
+
+   Dates are the case that matters: String(date) gives "Mon Feb 03 2025 …",
+   which normDate would then have to re-parse through the Date constructor. The
+   sheet already knows the value exactly, so it is written as ISO here and
+   normDate passes it straight through. */
+function excelCell(v){
+  if(v === null || v === undefined) return '';
+  if(v instanceof Date) return isNaN(v.getTime()) ? '' : iso(v);
+  if(typeof v === 'number'){
+    /* Excel carries a trailing float on some numeric cells (2022 as
+       2021.9999999). Round only when it is within a whisker of an integer. */
+    return Math.abs(v - Math.round(v)) < 1e-9 ? String(Math.round(v)) : String(v);
+  }
+  if(typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+  return String(v).trim();
+}
+
+/* Excel keeps no notion of "the used range" that can be trusted: a sheet people
+   have edited often carries blank rows, and trailing blank columns are normal.
+   Blank rows are dropped and every row is squared off to the header width, so a
+   short row cannot shift a value into the wrong column. */
+export function rowsToTable(raw){
+  /* The reader returns bare rows in the browser but [{ sheet, data }] in Node,
+     and has moved between the two across versions. Unwrap rather than depend on
+     which shape this build happens to hand back. */
+  let src = raw || [];
+  if(src.length && !Array.isArray(src[0]) && src[0] && Array.isArray(src[0].data)) src = src[0].data;
+
+  const grid = src.map(r => (Array.isArray(r) ? r : []).map(excelCell));
+  const first = grid.findIndex(r => r.some(c => c !== ''));
+  if(first < 0) return { headers: [], rows: [] };
+
+  const headers = grid[first];
+  let width = headers.length;
+  while(width > 0 && headers[width-1] === '') width--;
+
+  const body = grid.slice(first+1)
+    .filter(r => r.some(c => c !== ''))
+    .map(r => { const out = r.slice(0, width); while(out.length < width) out.push(''); return out; });
+
+  return { headers: headers.slice(0, width), rows: body };
+}
+
+/* Reads the first worksheet. The package exposes no bare entry point — the
+   browser build must be asked for by subpath — and it is imported on demand so
+   the parser stays out of the main bundle for everyone who never opens Import. */
+export async function parseExcel(file){
+  const { default: readXlsxFile } = await import('read-excel-file/browser');
+  const raw = await readXlsxFile(file);
+  return rowsToTable(raw);
 }
 
 export function normDate(v){
