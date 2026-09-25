@@ -3,13 +3,35 @@ import { motion } from 'motion/react';
 import { parse, fmt, diffDays } from '../lib/dates.js';
 import { kmpdc, insurance, dotFor, statusColor } from '../lib/status.js';
 import Mascot from './Mascot.jsx';
-import { Close, Pencil } from './icons.jsx';
+import { Close, Pencil, FileIcon } from './icons.jsx';
+import { documentUrl } from '../lib/api.js';
+
+/* Each stored attachment opens in a new tab: PDFs and images in the browser,
+   Word documents as a download. One recorded before uploads were kept has no
+   file behind it, so it stays a plain name. */
+function DocList({ files }){
+  if(!files || !files.length) return 'Not attached';
+  return (
+    <span className="flex flex-col items-end gap-1">
+      {files.map((f,i) => {
+        const url = documentUrl(f);
+        return url ? (
+          <a key={f.id} href={url} target="_blank" rel="noopener noreferrer"
+             className="inline-flex max-w-full items-center gap-1.5 font-semibold text-brand hover:underline">
+            <FileIcon width="13" height="13" className="shrink-0" />
+            <span className="truncate">{f.name}</span>
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        ) : (
+          <span key={f.name+i} className="truncate" title="Recorded before documents were stored — no file to open">{f.name}</span>
+        );
+      })}
+    </span>
+  );
+}
 
 function detailGroups(d){
-  const docs = (k) => {
-    const a = d[k] || [];
-    return a.length ? a.map(x => x.name).join(', ') : 'Not attached';
-  };
+  const docs = (k) => <DocList files={d[k]} />;
   return [
     { title:'Identity', items:[
       ['Salutation',d.salutation,'ui'],['Full names',d.fullNames,'ui'],
@@ -25,7 +47,8 @@ function detailGroups(d){
     { title:'Documents', items:[
       ['Indemnity insurance',docs('docInsurance'),'ui'],
       ['Practice licence',docs('docLicence'),'ui'],
-      ['Course certificates',docs('docCourses'),'ui']]}
+      ['Course certificates',docs('docCourses'),'ui'],
+      ['Current C.V.',docs('docCv'),'ui']]}
   ];
 }
 

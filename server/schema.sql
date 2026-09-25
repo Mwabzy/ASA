@@ -113,3 +113,17 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expires_at);
+
+-- ---------------------------------------------------------------------------
+-- Uploaded documents. The doctor record lists its attachments as
+-- {id, name, size}; the bytes live here, keyed by that id. Held in Postgres
+-- rather than on disk because the host's filesystem does not survive a deploy.
+
+CREATE TABLE IF NOT EXISTS documents (
+  id         TEXT PRIMARY KEY,
+  name       TEXT   NOT NULL,
+  mime       TEXT   NOT NULL,
+  size       INTEGER NOT NULL,
+  data       BYTEA  NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

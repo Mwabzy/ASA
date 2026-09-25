@@ -41,5 +41,14 @@ export const api = {
   createDoctor: (doctor) => request('/doctors', { method:'POST', body: JSON.stringify(doctor) }),
   updateDoctor: (id, doctor) => request('/doctors/'+encodeURIComponent(id), { method:'PUT', body: JSON.stringify(doctor) }),
   bulkImport: (payload) => request('/doctors/bulk', { method:'POST', body: JSON.stringify(payload) }),
+  uploadDocument: (file) => request('/documents', {
+    method:'POST',
+    headers: { 'Content-Type':'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) },
+    body: file
+  }),
   meta: () => request('/meta')
 };
+
+/* Where a stored attachment is opened from. Attachments recorded before
+   uploads were kept have no id, and so nothing to open. */
+export const documentUrl = (att) => att && att.id ? BASE+'/documents/'+encodeURIComponent(att.id) : null;

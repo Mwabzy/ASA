@@ -54,12 +54,20 @@ export const COLUMNS = [
 const JSON_COLS = new Set(['quals','doc_insurance','doc_licence','doc_courses','doc_cv']);
 const BOOL_COLS = new Set(['kha_ack']);
 
-/* Attachments are listed as {name,size}; anything else in the array is dropped. */
+/* Attachments are listed as {id,name,size}, where id points into the documents
+   table. Records from before uploads were stored carry only {name,size}.
+   Anything else in the array is dropped. */
+export const DOC_ID = /^f[a-f0-9]{24}$/;
+
 function cleanFiles(v){
   if(!Array.isArray(v)) return [];
   return v
     .filter(x => x && typeof x === 'object' && typeof x.name === 'string')
-    .map(x => ({ name: String(x.name).slice(0,300), size: Number(x.size) || 0 }));
+    .map(x => {
+      const out = { name: String(x.name).slice(0,300), size: Number(x.size) || 0 };
+      if(typeof x.id === 'string' && DOC_ID.test(x.id)) out.id = x.id;
+      return out;
+    });
 }
 
 export function toRow(rec){

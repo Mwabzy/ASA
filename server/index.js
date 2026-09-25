@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { query, withTransaction, pool } from './db.js';
-import { fromRow, toRow, toUpdateParams, INSERT_SQL } from './record.js';
+import { fromRow, toRow, toUpdateParams, INSERT_SQL, DOC_ID } from './record.js';
+import { randomBytes } from 'node:crypto';
 import { migrate } from './migrate.js';
 import {
   hashPassword, verifyPassword, createSession, destroySession, pruneSessions,
@@ -216,6 +217,74 @@ app.post('/api/doctors/bulk', requireActiveUser, wrap(async (req, res) => {
   const { rows: all } = await query(SELECT_ALL+' ORDER BY created_at DESC');
   res.json({ summary, doctors: all.map(fromRow) });
 }));
+
+/* ---------- documents ----------
+   The same set the application form accepts. The type is decided here from
+   the extension and checked against the file's opening bytes; the browser's
+   claim is not trusted, so nothing but these formats is ever served back. */
+const DOC_TYPES = {
+  pdf:  { mime:'application/pdf', inline:true,  magic:[[0x25,0x50,0x44,0x46]] },
+  png:  { mime:'image/png',       inline:true,  magic:[[0x89,0x50,0x4e,0x47]] },
+  jpg:  { mime:'image/jpeg',      inline:true,  magic:[[0xff,0xd8,0xff]] },
+  jpeg: { mime:'image/jpeg',      inline:true,  magic:[[0xff,0xd8,0xff]] },
+  doc:  { mime:'application/msword', inline:false, magic:[[0xd0,0xcf,0x11,0xe0]] },
+  docx: { mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', inline:false, magic:[[0x50,0x4b,0x03,0x04]] }
+};
+const DOC_MAX_BYTES = 10 * 1024 * 1024;
+
+const docType = (name) => DOC_TYPES[(String(name).split('.').pop() || '').toLowerCase()] || null;
+const startsWith = (buf, sig) => sig.every((b,i) => buf[i] === b);
+
+/* Public, like POST /api/doctors: the applicant attaches documents before
+   anyone at the hospital has an account for them. Reading them back is not. */
+app.post('/api/documents',
+  express.raw({ type: () => true, limit: DOC_MAX_BYTES }),
+  wrap(async (req, res) => {
+    let name = '';
+    try { name = decodeURIComponent(String(req.get('X-File-Name') || '')); } catch (e) { /* malformed */ }
+    name = name.replace(/[\\/\r\n"]/g, '_').trim().slice(0,300);
+    if(!name) return fail(res, 400, 'The upload is missing its file name.');
+
+    const type = docType(name);
+    if(!type) return fail(res, 415, 'Attach a PDF, JPG, PNG or Word document.');
+
+    const data = req.body;
+    if(!Buffer.isBuffer(data) || !data.length) return fail(res, 400, name+' is empty.');
+    if(!type.magic.some(sig => startsWith(data, sig))){
+      return fail(res, 415, name+' does not look like the kind of file its name says it is.');
+    }
+
+    const id = 'f'+randomBytes(12).toString('hex');
+    await query(
+      'INSERT INTO documents (id, name, mime, size, data) VALUES ($1, $2, $3, $4, $5)',
+      [id, name, type.mime, data.length, data]
+    );
+    res.status(201).json({ id, name, size: data.length });
+  })
+);
+
+app.get('/api/documents/:id', requireActiveUser, wrap(async (req, res) => {
+  if(!DOC_ID.test(req.params.id)) return fail(res, 404, 'No such document.');
+  const { rows } = await query('SELECT name, mime, data FROM documents WHERE id = $1', [req.params.id]);
+  if(!rows.length) return fail(res, 404, 'No such document.');
+
+  const doc = rows[0];
+  const type = docType(doc.name);
+  const disposition = type && type.inline ? 'inline' : 'attachment';
+  res.set({
+    'Content-Type': doc.mime,
+    'Content-Disposition': disposition+"; filename*=UTF-8''"+encodeURIComponent(doc.name),
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'private, no-store'
+  });
+  res.send(doc.data);
+}));
+
+/* An upload over the limit is refused by the body parser before the route runs. */
+app.use('/api/documents', (err, _req, res, next) => {
+  if(err && err.type === 'entity.too.large') return fail(res, 413, 'Each document must be 10 MB or smaller.');
+  next(err);
+});
 
 app.use('/api', (_req, res) => fail(res, 404, 'No such endpoint.'));
 

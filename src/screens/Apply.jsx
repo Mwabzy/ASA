@@ -9,6 +9,10 @@ import { buildFields } from '../lib/fields.js';
 import Field from '../components/Field.jsx';
 import Mascot from '../components/Mascot.jsx';
 import { Pencil } from '../components/icons.jsx';
+import { api } from '../lib/api.js';
+
+const DOC_FIELDS = ['docInsurance','docLicence','docCourses','docCv'];
+const fileKey = (field, f) => field+'|'+f.name+'|'+f.size;
 
 /* ---------- progress cord ---------- */
 function Cord({ step, total }){
@@ -235,6 +239,11 @@ export default function Apply({ form, setForm, doctors, editing, isPublic, onSub
   const [touched, setTouched] = useState({});
   const [qualDraft, setQualDraft] = useState('');
   const [fileUrls, setFileUrls] = useState({});
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  /* The chosen File objects, held until submit. The form itself only carries
+     {name,size}, plus the stored id once a file has been uploaded. */
+  const pendingFiles = useRef({});
   const focusField = useRef(null);
   const headingRef = useRef(null);
 
@@ -310,6 +319,7 @@ export default function Apply({ form, setForm, doctors, editing, isPublic, onSub
       const urls = {};
       const incoming = Array.from(fileList||[]).map(file => {
         try { urls[file.name] = URL.createObjectURL(file); } catch (e) { /* blob URLs unavailable */ }
+        pendingFiles.current[fileKey(id, file)] = file;
         return { name:file.name, size:file.size };
       });
       if(!incoming.length) return;
@@ -336,8 +346,39 @@ export default function Apply({ form, setForm, doctors, editing, isPublic, onSub
       }
       setStep(current+1); setDir(1); setAnimKey(k => k+1);
     } else {
-      onSubmit(normalize(form));
+      finish();
     }
+  };
+
+  /* Uploads every attachment not yet stored, then submits the record with
+     the stored ids in place. The ids are written back into the form too, so a
+     retry after a failed save does not upload the same file twice. */
+  const finish = async () => {
+    setUploadError('');
+    setUploading(true);
+    const updates = {};
+    let failed = null;
+    try {
+      for(const field of DOC_FIELDS){
+        const list = (form[field] || []).slice();
+        for(let i = 0; i < list.length; i++){
+          const att = list[i];
+          const file = !att.id && pendingFiles.current[fileKey(field, att)];
+          if(!file) continue;
+          const stored = await api.uploadDocument(file);
+          delete pendingFiles.current[fileKey(field, att)];
+          list[i] = { id:stored.id, name:att.name, size:att.size };
+          updates[field] = list;
+        }
+      }
+    } catch (e) {
+      failed = e;
+    }
+    /* Keep whatever did upload, even when a later file failed. */
+    if(Object.keys(updates).length) patch(updates);
+    setUploading(false);
+    if(failed){ setUploadError(failed.message); return; }
+    onSubmit(normalize({ ...form, ...updates }));
   };
 
   const back = () => {
@@ -437,17 +478,19 @@ export default function Apply({ form, setForm, doctors, editing, isPublic, onSub
       {/* ---- step footer ---- */}
       <div className="sticky bottom-0 border-t border-line bg-surface px-4 py-4 sm:px-6 lg:px-10">
         <div className="mx-auto w-full max-w-[920px]">
-          {submitError && (
+          {(uploadError || submitError) && (
             <p role="alert" className="mb-3 text-[12.5px]" style={{ color:'var(--color-inactive)' }}>
-              {submitError}
+              {uploadError || submitError}
             </p>
           )}
           <div className="flex gap-2.5">
             <button type="button" className="btn btn-ghost shrink-0" onClick={back} disabled={current===0}>
               Back
             </button>
-            <button type="button" className="btn ml-auto w-full max-w-[340px]" onClick={next} disabled={submitting}>
-              {submitting
+            <button type="button" className="btn ml-auto w-full max-w-[340px]" onClick={next} disabled={submitting || uploading}>
+              {uploading
+                ? 'Uploading documents…'
+                : submitting
                 ? 'Saving…'
                 : isReview
                   ? (editing ? 'Save changes' : (applying ? 'Submit application' : 'Register doctor'))
