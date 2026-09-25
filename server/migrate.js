@@ -9,6 +9,7 @@ import { toRow, INSERT_SQL } from './record.js';
 import { createHash } from 'node:crypto';
 import { hashPassword, generatePassword } from './auth.js';
 import { seed } from '../src/lib/seed.js';
+import { DIV_BY_CAT } from '../src/lib/constants.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -126,11 +127,84 @@ async function resetAdmin(){
   console.log('This will not repeat on restart. Remove ADMIN_PASSWORD_RESET and SEED_ADMIN_PASSWORD now.');
 }
 
+/* Category took over the five division names. A record still under an old
+   category (Surgeon, Physician, Anaesthesia, Other) is moved to the category
+   named after its division. Runs once per database, recorded in registry_meta,
+   so it cannot fire again after the division list itself changes. */
+const OLD_CATEGORIES = ['Surgeon','Physician','Anaesthesia','Other'];
+const OLD_DIVISIONS  = ['Surgery','Medicine','Paediatrics','Obs & Gynae','Anaesthesia'];
+
+async function recategorise(){
+  await withTransaction(async (client) => {
+    const done = await client.query(
+      `INSERT INTO registry_meta (key, value) VALUES ('categories_are_divisions', $1)
+       ON CONFLICT (key) DO NOTHING RETURNING key`,
+      [new Date().toISOString()]
+    );
+    if(!done.rows.length) return;
+    const { rowCount } = await client.query(
+      `UPDATE doctors SET category = speciality, category_other = '', updated_at = now()
+        WHERE category = ANY($1) AND speciality = ANY($2)`,
+      [OLD_CATEGORIES, OLD_DIVISIONS]
+    );
+    if(rowCount) console.log('Moved '+rowCount+' doctor(s) to the new categories.');
+  });
+}
+
+/* The divisions then became the specific disciplines under each category
+   (DIV_BY_CAT). A record still holding one of the five old division names is
+   moved onto the new division its sub-speciality names, when it names one;
+   the sub-speciality is then cleared, since it has become the division. One
+   that cannot be matched keeps its old division, and asks for a new one the
+   next time it is edited. Runs once per database. */
+const SUB_ALIASES = {
+  'orthopaedics':'Orthopaedic Surgery', 'ent':'ENT Surgery', 'maternal-fetal':'Maternal-Fetal Medicine',
+  'gynae-oncology':'Gynaecological Oncology', 'reproductive medicine':'Reproductive Medicine & Fertility',
+  'critical care':'Critical Care / ICU', 'icu':'Critical Care / ICU', 'pain medicine':'Pain Management',
+  'pulmonology':'Pulmonology / Respiratory Medicine', 'respiratory medicine':'Pulmonology / Respiratory Medicine'
+};
+
+function newDivision(category, sub){
+  const options = DIV_BY_CAT[category] || [];
+  const key = String(sub || '').trim().toLowerCase();
+  if(!key) return null;
+  return options.find(d => d.toLowerCase() === key)
+      || (SUB_ALIASES[key] && options.indexOf(SUB_ALIASES[key]) >= 0 ? SUB_ALIASES[key] : null);
+}
+
+async function redivide(){
+  await withTransaction(async (client) => {
+    const done = await client.query(
+      `INSERT INTO registry_meta (key, value) VALUES ('divisions_by_category', $1)
+       ON CONFLICT (key) DO NOTHING RETURNING key`,
+      [new Date().toISOString()]
+    );
+    if(!done.rows.length) return;
+    const { rows } = await client.query(
+      'SELECT id, category, sub_speciality FROM doctors WHERE speciality = ANY($1)', [OLD_DIVISIONS]
+    );
+    let moved = 0;
+    for(const r of rows){
+      const div = newDivision(r.category, r.sub_speciality);
+      if(!div) continue;
+      await client.query(
+        `UPDATE doctors SET speciality = $2, sub_speciality = '', updated_at = now() WHERE id = $1`,
+        [r.id, div]
+      );
+      moved++;
+    }
+    if(rows.length) console.log('Moved '+moved+' of '+rows.length+' doctor(s) onto the new divisions; '+
+      (rows.length-moved)+' need a division chosen by hand.');
+  });
+}
+
 export async function migrate(){
   const sql = await readFile(join(here, 'schema.sql'), 'utf8');
   await pool.query(sql);
   await seedAdmin();
   await resetAdmin();
+  await recategorise();
+  await redivide();
 
   const { rows } = await pool.query('SELECT count(*)::int AS n FROM doctors');
   if(rows[0].n > 0){

@@ -1,7 +1,7 @@
 /* Field descriptors for the wizard — ported verbatim. */
 import {
   APPLICANT_TYPES, SALUTATIONS, TOWNS, QUALS, CATEGORIES, ASSOC,
-  DIVISIONS, DIV_BY_CAT, SUB_BY_DIV, LABELS, REQUIRED, OPTIONAL, WIDE, DOC_ACCEPT
+  DIV_BY_CAT, SUB_BY_DIV, LABELS, REQUIRED, OPTIONAL, WIDE, DOC_ACCEPT
 } from './constants.js';
 import { iso, parse, fmt, diffDays } from './dates.js';
 import { kmpdc, insurance } from './status.js';
@@ -97,9 +97,10 @@ export function buildFields({ form, step, touched, qualDraft, doctors }){
       case 'categoryOther': f.placeholder='Describe the category'; break;
       case 'speciality':
         f.type='select';
-        f.options = DIV_BY_CAT[form.category] || DIVISIONS;
+        f.options = DIV_BY_CAT[form.category] || [];
+        f.disabled = !f.options.length;
         f.placeholder='Select a division';
-        f.help='ASA has five divisions. Category narrows the list.';
+        f.help = f.options.length ? 'The divisions within '+form.category+'.' : 'Choose a category first.';
         break;
       case 'subSpeciality':
         f.type='combo';

@@ -195,15 +195,15 @@ export const SAMPLE = {
             'Qualifications','Capacity','Division','Sub','Licence Issue','Indemnity Start',
             'Membership','Admitted','Status'],
   rows: [
-    ['Dr','Peter Kariuki','1985-04-12','0712345678','peter.k@mail.co.ke','00100','Nairobi','B1201','MBChB;MMed','Physician','Medicine','Cardiology','2025-02-01','2025-11-01','Consultant','2021','Active'],
-    ['Dr','Grace Wafula','1990-08-22','+254733112233','grace.w@mail.co.ke','80100','Mombasa','B3402','MBChB','Surgeon','Surgery','Orthopaedics','2024-06-15','2024-03-01','Associate','2023','Active'],
-    ['Prof','Samuel Kimani','1978-01-30','0722556677','samuel@mail.co.ke','','Nakuru','C4510','MBChB;MD;PhD','Physician','Medicine','','2026-01-10','','Consultant','2019','Active'],
-    ['Dr','Mary Atieno','1993-05-05','0700','mary.a@mail.co.ke','00200','Kisumu','b7788','MBChB','Physician','Paediatrics','','2025-09-01','2026-05-01','Visiting','2024','Active'],
-    ['Dr','Joseph Mwangi','not a date','0711223344','joseph[at]mail','00100','Thika','12345','MBChB;MRCS','Surgeon','Cardiology','','2023-07-07','2020-01-01','Associate','2022','Inactive'],
-    ['Dr','Achieng Odhiambo','1984-06-11','0712000111','ao@mail.co.ke','00100','Nairobi','A1042','MBChB','Physician','Medicine','','2025-01-01','2025-04-01','Consultant','2020','Active']
+    ['Dr','Peter Kariuki','1985-04-12','0712345678','peter.k@mail.co.ke','00100','Nairobi','B1201','MBChB;MMed','Medicine','Cardiology','','2025-02-01','2025-11-01','Consultant','2021','Active'],
+    ['Dr','Grace Wafula','1990-08-22','+254733112233','grace.w@mail.co.ke','80100','Mombasa','B3402','MBChB','Surgery','Orthopaedic Surgery','','2024-06-15','2024-03-01','Associate','2023','Active'],
+    ['Prof','Samuel Kimani','1978-01-30','0722556677','samuel@mail.co.ke','','Nakuru','C4510','MBChB;MD;PhD','Medicine','Internal Medicine','','2026-01-10','','Consultant','2019','Active'],
+    ['Dr','Mary Atieno','1993-05-05','0700','mary.a@mail.co.ke','00200','Kisumu','b7788','MBChB','Paediatrics','General Paediatrics','','2025-09-01','2026-05-01','Visiting','2024','Active'],
+    ['Dr','Joseph Mwangi','not a date','0711223344','joseph[at]mail','00100','Thika','12345','MBChB;MRCS','Surgery','Cardiology','','2023-07-07','2020-01-01','Associate','2022','Inactive'],
+    ['Dr','Achieng Odhiambo','1984-06-11','0712000111','ao@mail.co.ke','00100','Nairobi','A1042','MBChB','Medicine','Cardiology','','2025-01-01','2025-04-01','Consultant','2020','Active']
   ]
 };
 
 export const TEMPLATE_EXAMPLE = ['Dr','Jane Wanjiku','1988-03-14','0712345678','jane@mail.co.ke','00100','Nairobi',
-                                 'Doctors Plaza 3rd floor','A1234','MBChB;MMed','Physician','Medicine','Cardiology',
+                                 'Doctors Plaza 3rd floor','A1234','MBChB;MMed','Medicine','Cardiology','',
                                  '2025-01-15','2025-06-01','Consultant','2022'];

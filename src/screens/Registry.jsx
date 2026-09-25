@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { CATEGORIES, DIVISIONS, PAGE_SIZE } from '../lib/constants.js';
+import { CATEGORIES, DIV_BY_CAT, PAGE_SIZE } from '../lib/constants.js';
 import { staggerGroup } from '../lib/motion.js';
 import { kmpdc, insurance, statusOf } from '../lib/status.js';
 import { reduced } from '../lib/dates.js';
@@ -207,20 +207,24 @@ export default function Registry({
                 <span className="mr-0.5 text-[11px] uppercase tracking-[.06em] text-ink-52">Cat</span>
                 {['All'].concat(CATEGORIES).map(c => (
                   <button key={c} type="button" className="chip-filter chip-sub"
-                          aria-pressed={catFilter===c} onClick={() => setCatFilter(c)}>
+                          aria-pressed={catFilter===c} onClick={() => { setCatFilter(c); setDivFilter('All'); }}>
                     {c}
                   </button>
                 ))}
               </div>
-              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Division filter">
-                <span className="mr-0.5 text-[11px] uppercase tracking-[.06em] text-ink-52">Div</span>
-                {['All'].concat(DIVISIONS).map(c => (
-                  <button key={c} type="button" className="chip-filter chip-sub"
-                          aria-pressed={divFilter===c} onClick={() => setDivFilter(c)}>
-                    {c}
-                  </button>
-                ))}
-              </div>
+              {/* Fifty-odd divisions will not sit in one row, so they appear
+                  only once a category has narrowed them down. */}
+              {DIV_BY_CAT[catFilter] && (
+                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Division filter">
+                  <span className="mr-0.5 text-[11px] uppercase tracking-[.06em] text-ink-52">Div</span>
+                  {['All'].concat(DIV_BY_CAT[catFilter]).map(c => (
+                    <button key={c} type="button" className="chip-filter chip-sub"
+                            aria-pressed={divFilter===c} onClick={() => setDivFilter(c)}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* ---- cards ---- */}

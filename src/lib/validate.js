@@ -1,7 +1,7 @@
 /* Field validation — ported verbatim. The only change is that the doctor
    list is passed in rather than read off a module-level store, so the same
    rules serve both the wizard and the CSV importer. */
-import { DIVISIONS } from './constants.js';
+import { CATEGORIES, DIVISIONS, DIV_BY_CAT } from './constants.js';
 import { parse } from './dates.js';
 
 export function yearErr(v, required){
@@ -60,11 +60,17 @@ export function validate(id, form, doctors){
       return dup ? 'A doctor with '+v+' already exists.' : '';
     }
     case 'quals':         return (form.quals && form.quals.length>=1) ? '' : 'Add at least one qualification.';
-    case 'category':      return v ? '' : 'Choose a category.';
+    case 'category':
+      if(!v) return 'Choose a category.';
+      return CATEGORIES.indexOf(v)>=0 ? '' : 'Category must be one of: '+CATEGORIES.join(', ')+'.';
     case 'categoryOther': return (form.category==='Other' && !String(v).trim()) ? 'Describe the category.' : '';
     case 'speciality':
       if(!v) return 'Choose a division.';
-      return DIVISIONS.indexOf(v)>=0 ? '' : 'Division must be one of: '+DIVISIONS.join(', ')+'.';
+      if(DIV_BY_CAT[form.category]){
+        return DIV_BY_CAT[form.category].indexOf(v)>=0 ? ''
+          : v+' is not a division of '+form.category+'.';
+      }
+      return DIVISIONS.indexOf(v)>=0 ? '' : v+' is not an ASA division.';
     case 'kmpdcIssue': {
       if(!v) return 'Enter the KMPDC issue date.';
       const k = parse(v);

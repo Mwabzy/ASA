@@ -1,31 +1,44 @@
 /* Reference data — ported verbatim from the original registry.
-   The data model, the five divisions and the step flow are unchanged. */
+   The data model and the step flow are unchanged; categories and divisions
+   follow the list the Admitting Office supplied. */
 
 export const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 export const SALUTATIONS = ['Dr','Prof','Prof. Dr'];
 export const TOWNS = ['Nairobi','Mombasa','Kisumu','Nakuru','Eldoret','Thika','Ruiru','Nyeri','Machakos',
                       'Kericho','Kakamega','Meru','Kitale','Garissa','Malindi'];
 export const QUALS = ['MBChB','MMed','MD','BDS','MRCS','FCS(ECSA)','MRCP','FRCS','PhD'];
-export const CATEGORIES = ['Surgeon','Physician','Anaesthesia','Other'];
 export const ASSOC = ['Courtesy','Visiting','Associate','Consultant'];
 
-/* The five ASA divisions — a doctor belongs to exactly one. */
-export const DIVISIONS = ['Surgery','Medicine','Paediatrics','Obs & Gynae','Anaesthesia'];
-
+/* Five categories, each with its own divisions. A doctor sits in one category
+   and one division within it. Paediatric Surgery is listed under both Surgery
+   and Paediatrics, as it is in that list. */
 export const DIV_BY_CAT = {
-  Surgeon:    ['Surgery','Obs & Gynae'],
-  Physician:  ['Medicine','Paediatrics'],
-  Anaesthesia:['Anaesthesia'],
-  Other:      DIVISIONS
+  'Surgery': ['General Surgery','Orthopaedic Surgery','Neurosurgery','Cardiothoracic Surgery','Urology',
+              'Plastic & Reconstructive Surgery','ENT Surgery','Paediatric Surgery','Vascular Surgery',
+              'Colorectal Surgery','Breast & Endocrine Surgery'],
+  'Medicine': ['Internal Medicine','Cardiology','Neurology','Gastroenterology','Nephrology','Endocrinology',
+               'Pulmonology / Respiratory Medicine','Infectious Diseases','Rheumatology','Dermatology',
+               'Oncology','Geriatric Medicine'],
+  'Paediatrics': ['General Paediatrics','Neonatology','Paediatric Cardiology','Paediatric Neurology',
+                  'Paediatric Gastroenterology','Paediatric Nephrology','Paediatric Endocrinology',
+                  'Paediatric Haematology & Oncology','Paediatric Pulmonology','Paediatric Infectious Diseases',
+                  'Paediatric Surgery'],
+  'Obs & Gynae': ['Obstetrics','General Gynaecology','Maternal-Fetal Medicine','Reproductive Medicine & Fertility',
+                  'Gynaecological Oncology','Urogynaecology','Minimally Invasive Gynaecology','Family Planning',
+                  'Antenatal & Postnatal Care'],
+  'Anaesthesia': ['General Anaesthesia','Regional Anaesthesia','Paediatric Anaesthesia','Obstetric Anaesthesia',
+                  'Neuroanaesthesia','Cardiothoracic Anaesthesia','Critical Care / ICU','Pain Management',
+                  'Perioperative Medicine']
 };
 
-export const SUB_BY_DIV = {
-  'Surgery':      ['Orthopaedics','ENT','Ophthalmology','General surgery','Urology','Neurosurgery'],
-  'Medicine':     ['Cardiology','Nephrology','Endocrinology','Gastroenterology','Neurology','Dermatology','Psychiatry'],
-  'Paediatrics':  ['Neonatology','Paediatric cardiology','Paediatric surgery'],
-  'Obs & Gynae':  ['Maternal-fetal','Gynae-oncology','Reproductive medicine'],
-  'Anaesthesia':  ['Critical care','Pain medicine','Paediatric anaesthesia']
-};
+export const CATEGORIES = Object.keys(DIV_BY_CAT);
+
+/* Every division once, in list order. */
+export const DIVISIONS = [...new Set(Object.values(DIV_BY_CAT).flat())];
+
+/* The division is now the specific discipline, so there is no fixed
+   sub-speciality list beneath it; the field stays free text. */
+export const SUB_BY_DIV = {};
 
 export const APPLICANT_TYPES = [
   { id:'new',      label:'I’m applying to ASA' },
