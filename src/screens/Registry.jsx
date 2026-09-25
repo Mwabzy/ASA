@@ -6,8 +6,21 @@ import { kmpdc, insurance, statusOf } from '../lib/status.js';
 import { reduced } from '../lib/dates.js';
 import { exportCsv } from '../lib/csv.js';
 import DoctorCard from '../components/DoctorCard.jsx';
+import DoctorList from '../components/DoctorList.jsx';
 import { RegistrySkeleton, EmptyState, ErrorState } from '../components/States.jsx';
-import { Search, Download, Upload, ChevLeft, ChevRight, Close } from '../components/icons.jsx';
+import { Search, Download, Upload, ChevLeft, ChevRight, Close, Grid, Rows } from '../components/icons.jsx';
+
+/* Cards or rows. Remembered per browser as a convenience only — storage can
+   be unavailable, and the registry reads the same without it. */
+const LAYOUT_KEY = 'asa.registry.layout';
+function readLayout(){
+  try { return localStorage.getItem(LAYOUT_KEY) === 'list' ? 'list' : 'cards'; } catch (e) { return 'cards'; }
+}
+function saveLayout(v){
+  try { localStorage.setItem(LAYOUT_KEY, v); } catch (e) { /* storage unavailable */ }
+}
+
+const LAYOUTS = [['cards','Cards',Grid], ['list','List',Rows]];
 
 const LENSES = [
   ['all','All'],
@@ -45,7 +58,10 @@ export default function Registry({
   const [catFilter, setCatFilter] = useState('All');
   const [divFilter, setDivFilter] = useState('All');
   const [page, setPage] = useState(1);
+  const [layout, setLayout] = useState(readLayout);
   const listTop = useRef(null);
+
+  const chooseLayout = (v) => { setLayout(v); saveLayout(v); };
 
   const t = useCountUp(!loading && !error);
 
@@ -191,6 +207,23 @@ export default function Registry({
                   Reset filters
                 </button>
               )}
+              <div role="group" aria-label="Layout" className="ml-auto flex rounded-[10px] border border-line bg-raised p-0.5">
+                {LAYOUTS.map(([v, label, Icon]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-pressed={layout===v}
+                    onClick={() => chooseLayout(v)}
+                    className={
+                      'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors '+
+                      (layout===v ? 'bg-surface text-brand shadow-[0_1px_2px_rgba(10,10,35,.08)]' : 'text-ink-52 hover:text-ink')
+                    }
+                  >
+                    <Icon width="14" height="14" />
+                    <span className="sr-only sm:not-sr-only">{label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* ---- filter chips ---- */}
@@ -235,15 +268,17 @@ export default function Registry({
                       re-runs the stagger — otherwise paging swaps the contents
                       underneath a grid that has already finished animating. */}
                   <motion.div
-                    key={current+'|'+lens+'|'+catFilter+'|'+divFilter+'|'+query}
-                    variants={staggerGroup()}
+                    key={layout+'|'+current+'|'+lens+'|'+catFilter+'|'+divFilter+'|'+query}
+                    variants={staggerGroup(layout==='list' ? 0.02 : undefined)}
                     initial="hidden"
                     animate="visible"
-                    className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                    className={layout==='list' ? '' : 'grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3'}
                   >
-                    {visible.map(d => (
-                      <DoctorCard key={d.id} doctor={d} onOpen={onOpen} onEdit={onEdit} />
-                    ))}
+                    {layout==='list'
+                      ? <DoctorList doctors={visible} onOpen={onOpen} onEdit={onEdit} />
+                      : visible.map(d => (
+                          <DoctorCard key={d.id} doctor={d} onOpen={onOpen} onEdit={onEdit} />
+                        ))}
                   </motion.div>
 
                   {pageCount > 1 && (
