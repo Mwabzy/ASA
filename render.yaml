@@ -6,12 +6,12 @@
 # lives in the repo.
 
 databases:
-  - name: asa-db
-    databaseName: asa_db_3km2
-    user: asa_db_3km2_user
+  - name: doc-registry-db
+    databaseName: doc_registry_db
+    user: doc_registry_db_user
     plan: free
     region: oregon
-    postgresMajorVersion: "16"
+    postgresMajorVersion: "18"
 
 services:
   - type: web
@@ -27,7 +27,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: asa-db
+          name: doc-registry-db
           property: connectionString
       - key: NODE_VERSION
         value: "22"
