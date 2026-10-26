@@ -40,8 +40,8 @@ function detailGroups(d){
       ['P.O. Box',d.poBox||'—','mono'],['Town',d.town,'ui'],['Consulting rooms',d.address||'—','ui']]},
     { title:'Practice', items:[
       ['Registration no.',d.regNo,'mono'],['Qualifications',(d.quals||[]).join(', ')||'—','ui'],
-      ['Category', d.category==='Other'?(d.categoryOther||'Other'):d.category,'ui'],
-      ['Division',d.speciality,'ui'],['Sub-speciality',d.subSpeciality||'—','ui']]},
+      ['Division', d.category==='Other'?(d.categoryOther||'Other'):d.category,'ui'],
+      ['Speciality',d.speciality,'ui'],['Sub-speciality',d.subSpeciality||'—','ui']]},
     { title:'Membership', items:[
       ['Association',d.assocCategory,'ui'],['Year of admission',d.admissionYear||'—','mono']]},
     { title:'Documents', items:[

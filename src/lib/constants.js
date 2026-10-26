@@ -60,9 +60,9 @@ export const ALL_STEPS = [
   { key:'address', title:'Office', sub:'Where they can be reached',
     fields:['poBox','town','address'], pose:'checking' },
 
-  { key:'nPractice', only:'new', title:'Practice', sub:'Capacity, division and registration',
+  { key:'nPractice', only:'new', title:'Practice', sub:'Division, speciality and registration',
     fields:['category','speciality','subSpeciality','regNo'], pose:'listening' },
-  { key:'xPractice', only:'existing', title:'Practice', sub:'Registration and division',
+  { key:'xPractice', only:'existing', title:'Practice', sub:'Registration, division and speciality',
     fields:['regNo','quals','category','speciality','subSpeciality'], pose:'listening' },
 
   { key:'nTraining', only:'new', title:'Training', sub:'Qualifying years and recognition',
@@ -73,7 +73,7 @@ export const ALL_STEPS = [
   { key:'xCompliance', only:'existing', title:'Compliance', sub:'Licence and indemnity',
     fields:['kmpdcIssue','insuranceFrom'], pose:'checking' },
 
-  { key:'nReferees',  only:'new', title:'Referees', sub:'Three, in your division',
+  { key:'nReferees',  only:'new', title:'Referees', sub:'Three, in your speciality',
     fields:['ref1','ref2','ref3'], pose:'listening' },
   { key:'nHospitals', only:'new', title:'Admitting elsewhere', sub:'Where you admit currently',
     fields:['hosp1','hosp2','hosp3','hosp4'], pose:'sorting' },
@@ -95,8 +95,8 @@ export const LABELS = {
   fullNames:'Full names', dob:'Date of birth', placeOfBirth:'Place of birth', nationality:'Nationality',
   telephone:'Consulting rooms telephone', contact:'Cell phone', altMobile:'Alternative mobile no.',
   email:'Email', poBox:'P.O. Box code', town:'Town', address:'Office (consulting rooms)',
-  regNo:'Registration number', quals:'Qualifications', category:'Category', categoryOther:'Specify category',
-  speciality:'Division', subSpeciality:'Sub-speciality',
+  regNo:'Registration number', quals:'Qualifications', category:'Division', categoryOther:'Specify division',
+  speciality:'Speciality', subSpeciality:'Sub-speciality',
   yearMbchb:'Year of MB.Ch.B', yearMmed:'Year of M.Med', yearRegistration:'Year of registration',
   yearRecognition:'Year of specialist recognition',
   indemnityDetails:'Professional indemnity', practiceLicenceNo:'Licence for private practice no.',

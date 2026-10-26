@@ -61,16 +61,16 @@ export function validate(id, form, doctors){
     }
     case 'quals':         return (form.quals && form.quals.length>=1) ? '' : 'Add at least one qualification.';
     case 'category':
-      if(!v) return 'Choose a category.';
-      return CATEGORIES.indexOf(v)>=0 ? '' : 'Category must be one of: '+CATEGORIES.join(', ')+'.';
-    case 'categoryOther': return (form.category==='Other' && !String(v).trim()) ? 'Describe the category.' : '';
-    case 'speciality':
       if(!v) return 'Choose a division.';
+      return CATEGORIES.indexOf(v)>=0 ? '' : 'Division must be one of: '+CATEGORIES.join(', ')+'.';
+    case 'categoryOther': return (form.category==='Other' && !String(v).trim()) ? 'Describe the division.' : '';
+    case 'speciality':
+      if(!v) return 'Choose a speciality.';
       if(DIV_BY_CAT[form.category]){
         return DIV_BY_CAT[form.category].indexOf(v)>=0 ? ''
-          : v+' is not a division of '+form.category+'.';
+          : v+' is not a speciality in '+form.category+'.';
       }
-      return DIVISIONS.indexOf(v)>=0 ? '' : v+' is not an ASA division.';
+      return DIVISIONS.indexOf(v)>=0 ? '' : v+' is not an ASA speciality.';
     case 'kmpdcIssue': {
       if(!v) return 'Enter the KMPDC issue date.';
       const k = parse(v);

@@ -8,6 +8,7 @@
    which format the file arrived in. */
 import { pad2, iso } from './dates.js';
 import { validate, formatContact } from './validate.js';
+import { DIV_BY_CAT } from './constants.js';
 
 export const TARGETS = [
   ['salutation','Salutation',['salutation','title','prefix']],
@@ -20,8 +21,8 @@ export const TARGETS = [
   ['address','Office (consulting rooms)',['address','physical','street','office','rooms']],
   ['regNo','Registration number',['regno','registration','registrationnumber','licence','license','kmpdcno','regnumber']],
   ['quals','Qualifications',['quals','qualifications','qualification','degrees']],
-  ['category','Category',['category','type','class','capacity']],
-  ['speciality','Division',['division','speciality','specialty','discipline','dept','department']],
+  ['category','Division',['category','division','type','class','capacity']],
+  ['speciality','Speciality',['speciality','specialty','discipline','dept','department']],
   ['subSpeciality','Sub-speciality',['subspeciality','subspecialty','subdiscipline','sub']],
   ['kmpdcIssue','KMPDC issue date',['kmpdcissue','kmpdcissuedate','issuedate','licenceissue','issue']],
   ['insuranceFrom','Insurance from',['insurancefrom','insurance','indemnity','coverfrom','insurancedate','insstart','indemnitystart']],
@@ -98,6 +99,7 @@ export function rowsToTable(raw){
   const grid = src.map(r => (Array.isArray(r) ? r : []).map(excelCell));
   const first = grid.findIndex(r => r.some(c => c !== ''));
   if(first < 0) return { headers: [], rows: [] };
+  if(isAsaLayout(grid[first])) return asaToTable(grid.slice(first).filter(r => r.some(c => c !== '')));
 
   const headers = grid[first];
   let width = headers.length;
@@ -108,6 +110,112 @@ export function rowsToTable(raw){
     .map(r => { const out = r.slice(0, width); while(out.length < width) out.push(''); return out; });
 
   return { headers: headers.slice(0, width), rows: body };
+}
+
+/* The Admitting Office's own register has no header row: 32 columns in a fixed
+   order, the first a running row number. It is recognised by that number and
+   by its width, and each row is rewritten into the TARGETS order, so mapping,
+   validation and commit treat it like any other file. Columns the registry
+   has no field for (age, second phone and email, file status) are dropped. */
+const ASA = { salutation:1, fullNames:3, box:4, postCode:5, town:6, address:7, regNo:9, dob:10,
+              quals:12, group:13, division:15, sub:16, licenceYear:20, insuranceYear:24,
+              contact:25, email:27, assoc:30, admissionYear:31 };
+
+export function isAsaLayout(row){ return row.length >= 30 && /^\d+$/.test(row[0]); }
+
+/* Dates arrive as Excel day numbers when the cells are not formatted as dates. */
+function serialDate(v){
+  if(/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const n = Number(v);
+  return v && isFinite(n) && n > 0 ? iso(new Date(1899, 11, 30 + Math.floor(n))) : v;
+}
+
+/* Licence and insurance are given as a bare year; both run by calendar year. */
+const yearStart = (v) => /^\d{4}$/.test(v) ? v+'-01-01' : v;
+
+const titleCase = (s) => String(s).toLowerCase().replace(/(^|[\s'(/-])([a-z])/g, (m, p, c) => p+c.toUpperCase());
+
+/* "MBChB(Nairobi) 1997 M.Med(Surg)(Nairobi) 2004" is two qualifications, each
+   closed by its year. Commas inside one ("MBChB(Moi), 2008") would otherwise be
+   read as separators further down. */
+function asaQuals(s){
+  return String(s).replace(/\b((?:19|20)\d{2})\b\s*[,;]?\s*/g, '$1\n').split(/\n|;/)
+    .map(q => q.replace(/,/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean).join('; ');
+}
+
+const CAT_HINTS = [
+  ['Anaesthesia', /ana?esth/], ['Obs & Gynae', /obst|gyn/], ['Paediatrics', /pa?ediat/], ['Surgery', /surg/],
+  ['Medicine', /physician|medic|cardio|neuro|derma|onco|nephro|gastro|endocrin|rheuma|psychiat|radiol|pulmon|chest|ha?ematol/]
+];
+
+function asaCategory(group, division){
+  for(const s of [group, division]){
+    const hit = CAT_HINTS.find(h => h[1].test(s.toLowerCase()));
+    if(hit) return hit[0];
+  }
+  return group;
+}
+
+const DIV_ALIAS = {
+  anaesthesia:'General Anaesthesia', anesthesia:'General Anaesthesia',
+  obstetricsandgynaecology:'Obstetrics', obstetricsgynaecology:'Obstetrics', gynaecology:'General Gynaecology',
+  paediatrics:'General Paediatrics', orthopaedics:'Orthopaedic Surgery', ent:'ENT Surgery',
+  plasticsurgery:'Plastic & Reconstructive Surgery', cardiothoracic:'Cardiothoracic Surgery'
+};
+
+/* An exact division is kept as it is. Otherwise the nearest one in the category
+   is taken and noted, so the reviewer sees what changed; with nothing near, the
+   file's own value stays and validation names it. */
+function asaDivision(cat, raw){
+  const list = DIV_BY_CAT[cat] || [];
+  const n = norm(raw);
+  if(!n) return { value:'' };
+  const exact = list.find(d => norm(d) === n);
+  if(exact) return { value:exact };
+  const stems = s => s.toLowerCase().split(/[^a-z]+/).filter(w => w.length > 3).map(w => w.slice(0, 6));
+  const want = stems(raw);
+  let best = list.indexOf(DIV_ALIAS[n]) >= 0 ? DIV_ALIAS[n] : '', score = best ? Infinity : 0;
+  list.forEach(d => {
+    const k = stems(d).filter(w => want.indexOf(w) >= 0).length;
+    if(k > score){ best = d; score = k; }
+  });
+  return best ? { value:best, note:'Speciality “'+raw+'” → '+best } : { value:raw };
+}
+
+function asaToTable(grid){
+  const notes = [];
+  const rows = grid.map(r => {
+    const c = k => r[ASA[k]] || '';
+    const category = asaCategory(c('group'), c('division'));
+    const div = asaDivision(category, c('division'));
+    const code = /^\d{5}$/.test(c('postCode')) ? c('postCode') : '';
+    const box = /\w/.test(c('box')) ? c('box') : '';
+    const sub = /^(none|nil|n\/?a|-)?$/i.test(c('sub')) ? '' : titleCase(c('sub'));
+    notes.push(div.note ? [div.note] : []);
+    const rec = {
+      salutation: c('salutation').replace(/\.$/, ''),
+      fullNames: titleCase(c('fullNames')),
+      dob: serialDate(c('dob')),
+      contact: c('contact'),
+      email: c('email'),
+      poBox: box && code ? box+'-'+code : (box || code),
+      town: c('town'),
+      address: c('address'),
+      regNo: c('regNo'),
+      quals: asaQuals(c('quals')),
+      category,
+      speciality: div.value,
+      subSpeciality: sub,
+      kmpdcIssue: yearStart(c('licenceYear')),
+      insuranceFrom: yearStart(c('insuranceYear')),
+      assocCategory: titleCase(c('assoc')),
+      admissionYear: c('admissionYear')
+    };
+    return TARGETS.map(t => rec[t[0]]);
+  });
+  const map = {};
+  TARGETS.forEach(t => { map[t[0]] = t[1]; });
+  return { headers: TARGETS.map(t => t[1]), rows, map, notes };
 }
 
 /* Reads the first worksheet. The package exposes no bare entry point — the
@@ -181,7 +289,8 @@ export function impResults(imp, doctors){
     const dup = !!rec.regNo && doctors.some(d => d.regNo===rec.regNo);
     /* A duplicate is a decision, not a hard error. */
     if(dup && errs.regNo && errs.regNo.indexOf('already exists')>=0) delete errs.regNo;
-    return { i, rec, errs, ok:Object.keys(errs).length===0, dup };
+    const notes = (imp.notes && imp.notes[i]) || [];
+    return { i, rec, errs, ok:Object.keys(errs).length===0, dup, notes };
   });
 }
 
@@ -192,7 +301,7 @@ export function unmappedRequired(imp){
 
 export const SAMPLE = {
   headers: ['Title','Doctor Name','Birth','Mobile','E-mail','Box','City','Reg No',
-            'Qualifications','Capacity','Division','Sub','Licence Issue','Indemnity Start',
+            'Qualifications','Division','Speciality','Sub','Licence Issue','Indemnity Start',
             'Membership','Admitted','Status'],
   rows: [
     ['Dr','Peter Kariuki','1985-04-12','0712345678','peter.k@mail.co.ke','00100','Nairobi','B1201','MBChB;MMed','Medicine','Cardiology','','2025-02-01','2025-11-01','Consultant','2021','Active'],

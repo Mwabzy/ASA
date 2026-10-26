@@ -104,8 +104,8 @@ function reviewGroups(form){
     { title:'Office', key:'address', items:[
       ['P.O. Box',nz(f.poBox),'mono'],['Town',f.town,'ui'],['Consulting rooms',f.address,'ui']]},
     { title:'Practice', key:'nPractice', items:[
-      ['Capacity', f.category==='Other'?(f.categoryOther||'Other'):f.category,'ui'],
-      ['Division',f.speciality,'ui'],['Sub-speciality',nz(f.subSpeciality),'ui'],['Registration no.',f.regNo,'mono']]},
+      ['Division', f.category==='Other'?(f.categoryOther||'Other'):f.category,'ui'],
+      ['Speciality',f.speciality,'ui'],['Sub-speciality',nz(f.subSpeciality),'ui'],['Registration no.',f.regNo,'mono']]},
     { title:'Training', key:'nTraining', items:[
       ['MB.Ch.B',f.yearMbchb,'mono'],['M.Med',nz(f.yearMmed),'mono'],
       ['Registration',f.yearRegistration,'mono'],['Specialist recognition',f.yearRecognition,'mono']]},
@@ -134,8 +134,8 @@ function reviewGroups(form){
       ['P.O. Box',nz(f.poBox),'mono'],['Town',f.town,'ui'],['Consulting rooms',nz(f.address),'ui']]},
     { title:'Practice', key:'xPractice', items:[
       ['Registration no.',f.regNo,'mono'],['Qualifications',(f.quals||[]).join(', ')||'—','ui'],
-      ['Category', f.category==='Other'?(f.categoryOther||'Other'):f.category,'ui'],
-      ['Division',f.speciality,'ui'],['Sub-speciality',nz(f.subSpeciality),'ui']]},
+      ['Division', f.category==='Other'?(f.categoryOther||'Other'):f.category,'ui'],
+      ['Speciality',f.speciality,'ui'],['Sub-speciality',nz(f.subSpeciality),'ui']]},
     { title:'Compliance', key:'xCompliance', items:[
       ['KMPDC issue',fmt(parse(f.kmpdcIssue)),'mono'],
       ['Licence expiry', kv.expiry?fmt(kv.expiry):'—','mono'],

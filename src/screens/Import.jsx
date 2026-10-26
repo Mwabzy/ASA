@@ -9,7 +9,7 @@ import { Check, Download, Upload } from '../components/icons.jsx';
 const STAGE_NAMES = ['Drop','Map','Validate','Commit'];
 const POSES = ['greeting','listening','checking','sorting'];
 
-const blankImp = { stage:0, over:false, fileName:'', headers:[], rows:[], map:{}, dups:{} };
+const blankImp = { stage:0, over:false, fileName:'', headers:[], rows:[], map:{}, notes:[], dups:{} };
 
 export default function Import({ doctors, onCommit, committing, commitError, summary, onViewImported, onCancel }){
   const [imp, setImp] = useState(blankImp);
@@ -31,7 +31,7 @@ export default function Import({ doctors, onCommit, committing, commitError, sum
     setReadError('');
     setImp(s => ({ ...s, stage:1, over:false, fileName:file.name,
                    headers:parsed.headers, rows:parsed.rows,
-                   map:autoMap(parsed.headers), dups:{} }));
+                   map:parsed.map || autoMap(parsed.headers), notes:parsed.notes || [], dups:{} }));
   };
 
   /* Excel is read by the file object itself; CSV still goes through FileReader
@@ -67,7 +67,7 @@ export default function Import({ doctors, onCommit, committing, commitError, sum
 
   const loadSample = () => setImp(s => ({
     ...s, stage:1, over:false, fileName:'sample-doctors.csv',
-    headers:SAMPLE.headers, rows:SAMPLE.rows, map:autoMap(SAMPLE.headers), dups:{}
+    headers:SAMPLE.headers, rows:SAMPLE.rows, map:autoMap(SAMPLE.headers), notes:[], dups:{}
   }));
 
   /* Editing a cell writes back into the raw row so validation re-runs on it. */
@@ -93,6 +93,7 @@ export default function Import({ doctors, onCommit, committing, commitError, sum
   const ready   = results.filter(r => r.ok && !(r.dup && (imp.dups[r.i]||'skip')==='skip'));
   const bad     = results.filter(r => !r.ok);
   const dups    = results.filter(r => r.dup && r.ok);
+  const flagged = results.filter(r => r.notes.length);
 
   const commit = () => onCommit(results.filter(r => r.ok).map(r => ({
     rec: r.rec,
@@ -277,6 +278,18 @@ export default function Import({ doctors, onCommit, committing, commitError, sum
                     </div>
                   );
                 })}
+              </section>
+            )}
+
+            {!!flagged.length && (
+              <section className="mb-5">
+                <h2 className="kicker mb-2">Matched to the nearest speciality — check before importing</h2>
+                {flagged.map(r => (
+                  <div key={r.i} className="card mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <span className="text-[13px] font-semibold text-ink">{r.rec.fullNames || ('Row '+(r.i+1))}</span>
+                    <span className="text-[12px]" style={{ color:'var(--color-expiring)' }}>{r.notes.join(' · ')}</span>
+                  </div>
+                ))}
               </section>
             )}
 

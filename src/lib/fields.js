@@ -91,22 +91,22 @@ export function buildFields({ form, step, touched, qualDraft, doctors }){
         break;
       }
       case 'category':
-        f.type='select'; f.options=CATEGORIES; f.placeholder='Select a category';
+        f.type='select'; f.options=CATEGORIES; f.placeholder='Select a division';
         f.hint = isNewApplicant(form) ? 'The capacity you propose using the Hospital in.' : '';
         break;
-      case 'categoryOther': f.placeholder='Describe the category'; break;
+      case 'categoryOther': f.placeholder='Describe the division'; break;
       case 'speciality':
         f.type='select';
         f.options = DIV_BY_CAT[form.category] || [];
         f.disabled = !f.options.length;
-        f.placeholder='Select a division';
-        f.help = f.options.length ? 'The divisions within '+form.category+'.' : 'Choose a category first.';
+        f.placeholder='Select a speciality';
+        f.help = f.options.length ? 'The specialities within '+form.category+'.' : 'Choose a division first.';
         break;
       case 'subSpeciality':
         f.type='combo';
         f.options = SUB_BY_DIV[form.speciality] || [];
         f.disabled = !form.speciality;
-        if(!form.speciality) f.help='Choose a division first.';
+        if(!form.speciality) f.help='Choose a speciality first.';
         else f.placeholder='Optional — type or pick';
         break;
       case 'admissionYear':
@@ -125,7 +125,7 @@ export function buildFields({ form, step, touched, qualDraft, doctors }){
       case 'practiceLicenceNo': f.mono=true; f.placeholder='Licence number'; break;
       case 'ref1': case 'ref2': case 'ref3':
         f.type='area'; f.wide=true; f.placeholder='Name, hospital and postal address';
-        if(id==='ref1') f.hint='All three referees must be in the same division as you.';
+        if(id==='ref1') f.hint='All three referees must be in the same speciality as you.';
         break;
       case 'hosp1': case 'hosp2': case 'hosp3': case 'hosp4':
         f.placeholder = id==='hosp1' ? 'e.g. Kenyatta National Hospital' : 'Add another, or leave blank';

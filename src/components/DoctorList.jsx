@@ -35,8 +35,8 @@ export default function DoctorList({ doctors, onOpen, onEdit }){
         <thead className="border-b border-line bg-surface">
           <tr>
             <th scope="col" className={th+' w-auto'}>Doctor</th>
-            <th scope="col" className={th+' hidden w-[13%] lg:table-cell'}>Category</th>
-            <th scope="col" className={th+' hidden w-[20%] md:table-cell'}>Division</th>
+            <th scope="col" className={th+' hidden w-[13%] lg:table-cell'}>Division</th>
+            <th scope="col" className={th+' hidden w-[20%] md:table-cell'}>Speciality</th>
             <th scope="col" className={th+' w-[118px] sm:w-[16%]'}>KMPDC</th>
             <th scope="col" className={th+' hidden w-[16%] sm:table-cell'}>Insurance</th>
             <th scope="col" className={th+' hidden w-[9%] xl:table-cell'}>Docs</th>

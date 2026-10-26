@@ -236,8 +236,8 @@ export default function Registry({
                   </button>
                 ))}
               </div>
-              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Category filter">
-                <span className="mr-0.5 text-[11px] uppercase tracking-[.06em] text-ink-52">Cat</span>
+              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Division filter">
+                <span className="mr-0.5 text-[11px] uppercase tracking-[.06em] text-ink-52">Div</span>
                 {['All'].concat(CATEGORIES).map(c => (
                   <button key={c} type="button" className="chip-filter chip-sub"
                           aria-pressed={catFilter===c} onClick={() => { setCatFilter(c); setDivFilter('All'); }}>
@@ -248,8 +248,8 @@ export default function Registry({
               {/* Fifty-odd divisions will not sit in one row, so they appear
                   only once a category has narrowed them down. */}
               {DIV_BY_CAT[catFilter] && (
-                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Division filter">
-                  <span className="mr-0.5 text-[11px] uppercase tracking-[.06em] text-ink-52">Div</span>
+                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Speciality filter">
+                  <span className="mr-0.5 text-[11px] uppercase tracking-[.06em] text-ink-52">Spec</span>
                   {['All'].concat(DIV_BY_CAT[catFilter]).map(c => (
                     <button key={c} type="button" className="chip-filter chip-sub"
                             aria-pressed={divFilter===c} onClick={() => setDivFilter(c)}>
